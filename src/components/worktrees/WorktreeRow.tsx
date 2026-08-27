@@ -30,6 +30,7 @@ export function WorktreeRow({
     >
       {/* 選択中を示す幹。3 ペインを貫く共通の語彙。 */}
       <span className="kd-trunk" aria-hidden />
+
       <span className="kd-wt__branch">
         <Icon
           name={worktree.detached ? "commit" : "polyline"}
@@ -43,7 +44,7 @@ export function WorktreeRow({
 
       <span className="kd-wt__meta">
         {status?.error ? (
-          <span className="kd-wt__error">状態を取得できません</span>
+          <span className="kd-wt__error">取得失敗</span>
         ) : status ? (
           <>
             {status.dirty ? (

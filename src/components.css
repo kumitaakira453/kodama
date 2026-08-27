@@ -195,101 +195,301 @@
 }
 
 /* ==========================================================================
-   左ペイン: プロジェクトと worktree
+   プロジェクト切替
    ========================================================================== */
 
-.kd-tree {
-  padding: 8px 0 24px;
+.kd-switcher {
+  position: relative;
+  flex: 0 0 auto;
 }
 
-.kd-tree__project + .kd-tree__project {
-  margin-top: 4px;
-}
-
-.kd-tree__head {
+.kd-switcher__button {
   display: flex;
   align-items: center;
-  padding: 0 6px 0 4px;
-  color: var(--kd-muted);
-}
-
-.kd-tree__head:hover .kd-tree__action {
-  opacity: 1;
-}
-
-.kd-tree__toggle {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 6px 4px;
-  border: 0;
+  gap: 7px;
+  padding: 5px 8px 5px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--kd-radius-md);
   background: transparent;
   cursor: pointer;
-  text-align: left;
+  transition:
+    background var(--kd-dur-instant) var(--kd-ease-out),
+    border-color var(--kd-dur-instant) var(--kd-ease-out);
 }
 
-.kd-tree__name {
+.kd-switcher__button:hover {
+  background: var(--kd-hover);
+  border-color: var(--kd-border);
+}
+
+.kd-switcher__name {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.kd-switcher__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 260px;
+  padding: 5px;
+  border: 1px solid var(--kd-border-strong);
+  border-radius: var(--kd-radius-md);
+  background: var(--kd-elevated);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.32);
+  animation: kd-menu-in var(--kd-dur-instant) var(--kd-ease-out);
+  transform-origin: top left;
+}
+
+@keyframes kd-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.kd-switcher__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-switcher__item:hover {
+  background: var(--kd-hover);
+}
+
+.kd-switcher__item[aria-selected="true"] {
+  color: var(--kd-accent);
+}
+
+.kd-switcher__itemname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kd-switcher__sep {
+  height: 1px;
+  margin: 5px 2px;
+  background: var(--kd-border);
+}
+
+.kd-titlebar__spec {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  text-align: center;
+  color: var(--kd-muted);
+  font-size: 11.5px;
 }
 
-.kd-tree__count {
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.7;
-}
+/* ==========================================================================
+   モーダル
+   ========================================================================== */
 
-.kd-tree__action {
+.kd-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  background: rgb(0 0 0 / 0.42);
+  animation: kd-fade-in var(--kd-dur-fast) var(--kd-ease-out);
+}
+
+.kd-modal {
+  width: min(560px, calc(100vw - 64px));
+  max-height: calc(100vh - 96px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--kd-border-strong);
+  border-radius: var(--kd-radius-lg);
+  background: var(--kd-elevated);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.4);
+  animation: kd-modal-in var(--kd-dur-fast) var(--kd-ease-out);
+}
+
+@keyframes kd-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+.kd-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 12px 18px;
+  border-bottom: 1px solid var(--kd-border);
+}
+
+.kd-modal__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.kd-modal__body {
+  padding: 8px;
+  overflow: auto;
+}
+
+.kd-modal__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--kd-border);
+}
+
+.kd-modal__note {
+  margin: 0;
+  color: var(--kd-muted);
+  font-size: 11px;
+}
+
+.kd-projlist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kd-projlist__item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--kd-radius-sm);
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-projlist__item:hover {
+  background: var(--kd-hover);
+}
+
+.kd-projlist__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.kd-projlist__name {
+  font-weight: 600;
+}
+
+.kd-projlist__path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kd-muted);
+  font-family: var(--kd-font-mono);
+  font-size: 10.5px;
+}
+
+.kd-projlist__empty {
+  padding: 24px;
+  color: var(--kd-muted);
+  text-align: center;
+}
+
+.kd-iconbtn--danger:hover {
+  color: var(--kd-danger);
+}
+
+/* ==========================================================================
+   左ペイン: worktree
+   ========================================================================== */
+
+.kd-wtpane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.kd-wtpane__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  color: var(--kd-muted);
+  border-bottom: 1px solid var(--kd-border);
+}
+
+.kd-wtpane__search {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kd-fg);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.kd-wtpane__search::placeholder {
+  color: var(--kd-muted);
+}
+
+.kd-wtpane__clear {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
   border: 0;
   border-radius: 4px;
   background: transparent;
   color: inherit;
   cursor: pointer;
-  opacity: 0;
-  transition:
-    opacity var(--kd-dur-instant) var(--kd-ease-out),
-    background var(--kd-dur-instant) var(--kd-ease-out);
 }
 
-.kd-tree__action:hover {
+.kd-wtpane__clear:hover {
   background: var(--kd-hover);
-  color: var(--kd-fg);
 }
 
-/* 0fr → 1fr で高さ auto を畳む。max-height のハックと違い、
-   畳む速度が中身の高さに左右されない。 */
-.kd-tree__body {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows var(--kd-dur-base) var(--kd-ease-out);
+.kd-wtpane__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 0 24px;
 }
 
-.kd-tree__body[data-open] {
-  grid-template-rows: 1fr;
-}
-
-.kd-tree__clip {
-  overflow: hidden;
-}
-
-.kd-tree__empty {
+.kd-pane__note {
   margin: 0;
-  padding: 6px 12px 10px 26px;
-  font-size: 11px;
+  padding: 14px 16px;
   color: var(--kd-muted);
+  font-size: 11.5px;
+}
+
+.kd-pane__note--center {
+  display: grid;
+  place-content: center;
+  height: 100%;
+  text-align: center;
+}
+
+.kd-pane__loading {
+  display: grid;
+  place-items: center;
+  height: 100%;
 }
 
 /* worktree の行。枝分かれの縦線を左に引く。 */
@@ -302,7 +502,7 @@
     "subject subject";
   gap: 2px 8px;
   width: 100%;
-  padding: 6px 10px 7px 22px;
+  padding: 6px 10px 7px 20px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -314,7 +514,7 @@
 .kd-wt::before {
   content: "";
   position: absolute;
-  left: 13px;
+  left: 11px;
   top: 0;
   bottom: 0;
   width: 1px;
@@ -421,6 +621,182 @@
   white-space: nowrap;
   color: var(--kd-muted);
   font-size: 11px;
+}
+
+/* ==========================================================================
+   中ペイン: コミット一覧 + 変更ファイル
+   ========================================================================== */
+
+.kd-pane--mid {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.kd-pane__top {
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kd-pane__bottom {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.kd-hresizer {
+  flex: 0 0 6px;
+  cursor: row-resize;
+  position: relative;
+  z-index: 1;
+}
+
+.kd-hresizer::after {
+  content: "";
+  position: absolute;
+  inset: 2px 0;
+  background: var(--kd-border);
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-hresizer:hover::after {
+  background: var(--kd-accent);
+}
+
+.kd-commits {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.kd-commits__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 7px;
+  border-bottom: 1px solid var(--kd-border);
+  color: var(--kd-muted);
+}
+
+.kd-commits__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.kd-commits__badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kd-accent) 22%, transparent);
+  color: var(--kd-accent);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-commits__hint {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.kd-commits__hint:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.kd-commits__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 8px;
+}
+
+.kd-commits__sep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 4px;
+  color: var(--kd-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.kd-commits__sep::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--kd-border);
+}
+
+/* コミット / 疑似エントリの行。 */
+.kd-crow {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 10px 5px 18px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-crow:hover {
+  background: var(--kd-hover);
+}
+
+.kd-crow[data-selected] {
+  background: var(--kd-active);
+}
+
+/* 範囲の途中の行は幹を途切れさせない。両端だけ丸めて範囲の始点終点を示す。 */
+.kd-crow[data-selected] .kd-trunk {
+  transform: scaleY(1);
+}
+
+.kd-crow[data-edge] .kd-trunk {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--kd-accent) 60%, transparent);
+}
+
+.kd-crow[data-empty] {
+  opacity: 0.45;
+}
+
+.kd-crow__icon {
+  color: var(--kd-muted);
+}
+
+.kd-crow__sha {
+  font-family: var(--kd-font-mono);
+  font-size: 11px;
+  color: var(--kd-muted);
+}
+
+.kd-crow[data-selected] .kd-crow__sha {
+  color: var(--kd-accent);
+}
+
+.kd-crow__subject {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
+.kd-crow__meta {
+  color: var(--kd-muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ==========================================================================

@@ -63,6 +63,7 @@ pub fn run() {
             commands::project::rename_project,
             commands::worktree::list_worktrees,
             commands::worktree::worktree_statuses,
+            commands::revision::list_revisions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

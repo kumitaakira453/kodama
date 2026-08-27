@@ -1,7 +1,15 @@
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 
+import { describeSelection } from "../../lib/revisions";
+import type { CommitInfo, Project } from "../../lib/types";
+import {
+  commitSelectionAtom,
+  settingsOpenAtom,
+  themeAtom,
+  type Theme,
+} from "../../state/atoms";
+import { ProjectSwitcher } from "../projects/ProjectSwitcher";
 import { IconButton } from "../ui/Button";
-import { themeAtom, type Theme } from "../../state/atoms";
 
 const NEXT_THEME: Record<Theme, Theme> = {
   system: "dark",
@@ -22,7 +30,9 @@ const THEME_LABEL: Record<Theme, string> = {
 };
 
 interface TitleBarProps {
-  onAddProject: () => void;
+  projects: Project[];
+  commits: CommitInfo[];
+  defaultBase: string | null;
   onReload: () => void;
 }
 
@@ -30,20 +40,29 @@ interface TitleBarProps {
  * ドラッグ領域はこのコンテナだけに付ける。`data-tauri-drag-region` を持つ要素の
  * 子はドラッグ対象から外れるので、ボタン側に打ち消しの指定は要らない。
  */
-export function TitleBar({ onAddProject, onReload }: TitleBarProps) {
+export function TitleBar({
+  projects,
+  commits,
+  defaultBase,
+  onReload,
+}: TitleBarProps) {
   const [theme, setTheme] = useAtom(themeAtom);
+  const [selection] = useAtom(commitSelectionAtom);
+  const setSettingsOpen = useSetAtom(settingsOpenAtom);
 
   return (
     <header className="kd-titlebar" data-tauri-drag-region>
-      <div className="kd-titlebar__brand">
-        <TrunkMark />
-        <span className="kd-titlebar__name">kodama</span>
-      </div>
+      <ProjectSwitcher projects={projects} />
+
+      <span className="kd-titlebar__spec" title="いま表示している比較対象">
+        {describeSelection(selection, commits, defaultBase)}
+      </span>
+
       <div className="kd-titlebar__actions">
         <IconButton
-          name="create_new_folder"
-          label="プロジェクトを追加 (⌘O)"
-          onClick={onAddProject}
+          name="settings"
+          label="プロジェクトを管理"
+          onClick={() => setSettingsOpen(true)}
         />
         <IconButton name="refresh" label="再読込 (⌘R)" onClick={onReload} />
         <IconButton
@@ -53,32 +72,5 @@ export function TitleBar({ onAddProject, onReload }: TitleBarProps) {
         />
       </div>
     </header>
-  );
-}
-
-/** 年輪を模したマーク。3 本の輪と、中心を通る幹の線。 */
-function TrunkMark() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      <circle
-        cx="12"
-        cy="12"
-        r="9.5"
-        fill="none"
-        stroke="var(--kd-accent)"
-        strokeWidth="1.6"
-        opacity="0.45"
-      />
-      <circle
-        cx="12"
-        cy="12"
-        r="6"
-        fill="none"
-        stroke="var(--kd-accent)"
-        strokeWidth="1.6"
-        opacity="0.7"
-      />
-      <circle cx="12" cy="12" r="2.4" fill="var(--kd-accent)" />
-    </svg>
   );
 }

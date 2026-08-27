@@ -1,9 +1,10 @@
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
+import type { CommitSelection } from "../lib/revisions";
 import type {
-  DiffSpec,
   Project,
+  RevisionList,
   ViewMode,
   WorktreeInfo,
   WorktreeStatus,
@@ -86,15 +87,16 @@ export const selectedWorktreeAtom = atomWithStorage<string | null>(
   undefined,
   sync,
 );
-export const diffSpecAtom = atomWithStorage<DiffSpec>(
-  "kodama.spec",
-  { kind: "uncommitted" },
+export const commitSelectionAtom = atomWithStorage<CommitSelection>(
+  "kodama.commitSelection",
+  { kind: "pseudo", id: "uncommitted" },
   undefined,
   sync,
 );
-export const collapsedProjectsAtom = atomWithStorage<string[]>(
-  "kodama.collapsedProjects",
-  [],
+/** 中ペインを上下に分ける境界。コミット一覧の高さ。 */
+export const commitPaneHeightAtom = atomWithStorage<number>(
+  "kodama.commitPaneHeight",
+  240,
   undefined,
   sync,
 );
@@ -106,7 +108,10 @@ export const projectsAtom = atom<Project[]>([]);
 export const worktreesAtom = atom<Record<string, WorktreeInfo[]>>({});
 /** worktree のパス → 状態。一覧より後から埋まる。 */
 export const statusesAtom = atom<Record<string, WorktreeStatus>>({});
+/** 選択中 worktree のコミット一覧。 */
+export const revisionsAtom = atom<RevisionList | null>(null);
 export const selectedFileAtom = atom<string | null>(null);
+export const settingsOpenAtom = atom<boolean>(false);
 
 // ---- 一時状態 ----
 

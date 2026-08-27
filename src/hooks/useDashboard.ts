@@ -1,4 +1,4 @@
-import { useAtom, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api } from "../lib/ipc";
@@ -75,6 +75,25 @@ export function useDashboard() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // 選択の穴埋めは reload と分けておく。reload が選択に依存すると、選択を直した
+  // 瞬間に reload の同一性が変わって再読込が二重に走る。
+  useEffect(() => {
+    if (projects.length === 0) return;
+    if (!projects.some((p) => p.id === selectedProjectId)) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId, setSelectedProjectId]);
+
+  const worktrees = useAtomValue(worktreesAtom);
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    const list = worktrees[selectedProjectId];
+    if (!list?.length) return;
+    if (!list.some((w) => w.path === selectedWorktree)) {
+      setSelectedWorktree((list.find((w) => w.isMain) ?? list[0]).path);
+    }
+  }, [worktrees, selectedProjectId, selectedWorktree, setSelectedWorktree]);
 
   const addProject = useCallback(
     async (path: string) => {

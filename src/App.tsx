@@ -1,27 +1,42 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { useAtomValue } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
+import { CommitPane } from "./components/commits/CommitPane";
 import { EmptyProjects } from "./components/empty/EmptyProjects";
 import { TitleBar } from "./components/layout/TitleBar";
-import { ProjectTree } from "./components/projects/ProjectTree";
+import { SettingsModal } from "./components/projects/SettingsModal";
+import { HResizer } from "./components/ui/HResizer";
 import { Resizer } from "./components/ui/Resizer";
 import { RingSpinner } from "./components/ui/RingSpinner";
 import { Toasts } from "./components/ui/Toasts";
+import { WorktreePane } from "./components/worktrees/WorktreePane";
 import { useDashboard } from "./hooks/useDashboard";
 import { usePaneResize } from "./hooks/usePaneResize";
+import { useRevisions } from "./hooks/useRevisions";
 import { useTheme } from "./hooks/useTheme";
 import { useToast } from "./hooks/useToast";
+import { buildSpec } from "./lib/revisions";
 import {
+  commitPaneHeightAtom,
+  commitSelectionAtom,
   filesWidthAtom,
+  revisionsAtom,
   selectedWorktreeAtom,
+  settingsOpenAtom,
   treeWidthAtom,
 } from "./state/atoms";
 
+/** コミット一覧とファイル一覧、それぞれが潰れない最小の高さ。 */
+const MIN_COMMITS_H = 120;
+const MIN_FILES_H = 140;
+
 export default function App() {
   useTheme();
+  useRevisions();
+
   const { projects, loading, reload, addProject, removeProject } =
     useDashboard();
   const { showError } = useToast();
@@ -29,8 +44,18 @@ export default function App() {
     treeWidthAtom,
     filesWidthAtom,
   );
+  const [commitHeight, setCommitHeight] = useAtom(commitPaneHeightAtom);
+  const [settingsOpen, setSettingsOpen] = useAtom(settingsOpenAtom);
+  const revisions = useAtomValue(revisionsAtom);
+  const selection = useAtomValue(commitSelectionAtom);
   const selectedWorktree = useAtomValue(selectedWorktreeAtom);
   const [dragging, setDragging] = useState(false);
+
+  const spec = buildSpec(
+    selection,
+    revisions?.commits ?? [],
+    revisions?.defaultBase ?? null,
+  );
 
   const handleAddProject = useCallback(async () => {
     try {
@@ -60,7 +85,17 @@ export default function App() {
     [showError],
   );
 
-  // ウィンドウ全体をドロップ先にする。初回起動の画面では枠が光って受け口を示す。
+  const dragCommitBoundary = useCallback(
+    (dy: number) => {
+      setCommitHeight((h) => {
+        const available = window.innerHeight - MIN_FILES_H;
+        return Math.max(MIN_COMMITS_H, Math.min(h + dy, available));
+      });
+    },
+    [setCommitHeight],
+  );
+
+  // ウィンドウ全体をドロップ先にする。
   useEffect(() => {
     const unlisten = getCurrentWebview().onDragDropEvent((event) => {
       if (event.payload.type === "over") {
@@ -107,7 +142,12 @@ export default function App() {
   if (projects.length === 0) {
     return (
       <div className="kd-shell">
-        <TitleBar onAddProject={handleAddProject} onReload={reload} />
+        <TitleBar
+          projects={projects}
+          commits={[]}
+          defaultBase={null}
+          onReload={reload}
+        />
         <EmptyProjects onAddProject={handleAddProject} dragging={dragging} />
         <Toasts />
       </div>
@@ -116,21 +156,38 @@ export default function App() {
 
   return (
     <div className="kd-shell" data-dragging={dragging || undefined}>
-      <TitleBar onAddProject={handleAddProject} onReload={reload} />
+      <TitleBar
+        projects={projects}
+        commits={revisions?.commits ?? []}
+        defaultBase={revisions?.defaultBase ?? null}
+        onReload={reload}
+      />
+
       <div className="kd-panes">
         <aside className="kd-pane kd-pane--tree" style={{ width: treeWidth }}>
-          <ProjectTree
-            projects={projects}
-            onRemoveProject={handleRemoveProject}
-            onRevealProject={handleReveal}
-          />
+          <WorktreePane onRevealWorktree={handleReveal} />
         </aside>
         <Resizer onDrag={dragTree} />
 
-        <section className="kd-pane kd-pane--files" style={{ width: filesWidth }}>
-          <div className="kd-placeholder">
-            <p>変更ファイル</p>
-            <small>{selectedWorktree ?? "worktree を選んでください"}</small>
+        <section className="kd-pane kd-pane--mid" style={{ width: filesWidth }}>
+          <div
+            className="kd-pane__top"
+            style={{ height: commitHeight, flexBasis: commitHeight }}
+          >
+            <CommitPane />
+          </div>
+          <HResizer onDrag={dragCommitBoundary} />
+          <div className="kd-pane__bottom">
+            <div className="kd-placeholder">
+              <p>変更ファイル</p>
+              <small>
+                {selectedWorktree
+                  ? spec
+                    ? `${spec.kind} を読み込みます`
+                    : "比較対象を選んでください"
+                  : "worktree を選んでください"}
+              </small>
+            </div>
           </div>
         </section>
         <Resizer onDrag={dragFiles} />
@@ -142,6 +199,16 @@ export default function App() {
           </div>
         </section>
       </div>
+
+      {settingsOpen ? (
+        <SettingsModal
+          projects={projects}
+          onClose={() => setSettingsOpen(false)}
+          onAddProject={handleAddProject}
+          onRemoveProject={handleRemoveProject}
+          onReveal={handleReveal}
+        />
+      ) : null}
       <Toasts />
     </div>
   );

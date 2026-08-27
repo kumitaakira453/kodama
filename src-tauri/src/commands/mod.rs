@@ -1,4 +1,5 @@
 pub mod project;
+pub mod revision;
 pub mod worktree;
 
 use crate::error::{KdError, KdResult};
