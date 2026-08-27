@@ -64,6 +64,7 @@ pub fn run() {
             commands::worktree::list_worktrees,
             commands::worktree::worktree_statuses,
             commands::revision::list_revisions,
+            commands::diff::load_diff,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

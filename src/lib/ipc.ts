@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  DiffResponse,
+  DiffSpec,
   Project,
   RevisionList,
   WorktreeInfo,
@@ -25,4 +27,7 @@ export const api = {
 
   listRevisions: (worktree: string, limit: number = REVISION_LIMIT) =>
     invoke<RevisionList>("list_revisions", { worktree, limit }),
+
+  loadDiff: (worktree: string, spec: DiffSpec, context: number) =>
+    invoke<DiffResponse>("load_diff", { worktree, spec, context }),
 };

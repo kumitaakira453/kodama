@@ -5,7 +5,9 @@ import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
 import { CommitPane } from "./components/commits/CommitPane";
+import { DiffPane } from "./components/diff/DiffPane";
 import { EmptyProjects } from "./components/empty/EmptyProjects";
+import { FilePane } from "./components/files/FilePane";
 import { TitleBar } from "./components/layout/TitleBar";
 import { SettingsModal } from "./components/projects/SettingsModal";
 import { HResizer } from "./components/ui/HResizer";
@@ -14,6 +16,7 @@ import { RingSpinner } from "./components/ui/RingSpinner";
 import { Toasts } from "./components/ui/Toasts";
 import { WorktreePane } from "./components/worktrees/WorktreePane";
 import { useDashboard } from "./hooks/useDashboard";
+import { useDiff } from "./hooks/useDiff";
 import { usePaneResize } from "./hooks/usePaneResize";
 import { useRevisions } from "./hooks/useRevisions";
 import { useTheme } from "./hooks/useTheme";
@@ -55,6 +58,17 @@ export default function App() {
     selection,
     revisions?.commits ?? [],
     revisions?.defaultBase ?? null,
+  );
+  const { diff, loading: diffLoading } = useDiff(spec);
+
+  const revealInWorktree = useCallback(
+    (relativePath: string) => {
+      if (!selectedWorktree) return;
+      void revealItemInDir(`${selectedWorktree}/${relativePath}`).catch(
+        showError,
+      );
+    },
+    [selectedWorktree, showError],
   );
 
   const handleAddProject = useCallback(async () => {
@@ -178,25 +192,21 @@ export default function App() {
           </div>
           <HResizer onDrag={dragCommitBoundary} />
           <div className="kd-pane__bottom">
-            <div className="kd-placeholder">
-              <p>変更ファイル</p>
-              <small>
-                {selectedWorktree
-                  ? spec
-                    ? `${spec.kind} を読み込みます`
-                    : "比較対象を選んでください"
-                  : "worktree を選んでください"}
-              </small>
-            </div>
+            <FilePane
+              diff={diff}
+              loading={diffLoading}
+              onRevealFile={revealInWorktree}
+            />
           </div>
         </section>
         <Resizer onDrag={dragFiles} />
 
         <section className="kd-pane kd-pane--diff">
-          <div className="kd-placeholder">
-            <p>差分</p>
-            <small>ファイルを選ぶとここに表示されます</small>
-          </div>
+          <DiffPane
+            diff={diff}
+            loading={diffLoading}
+            onOpenFile={(path) => revealInWorktree(path)}
+          />
         </section>
       </div>
 

@@ -800,6 +800,424 @@
 }
 
 /* ==========================================================================
+   変更ファイル一覧
+   ========================================================================== */
+
+.kd-filepane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.kd-filepane__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 7px;
+  border-bottom: 1px solid var(--kd-border);
+  color: var(--kd-muted);
+  font-size: 11px;
+}
+
+.kd-filepane__stat {
+  display: flex;
+  gap: 8px;
+  font-family: var(--kd-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-filepane__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 0 20px;
+}
+
+.kd-filetree {
+  min-width: max-content;
+}
+
+.kd-dir {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 5px 12px 5px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--kd-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-dir:hover {
+  background: var(--kd-hover);
+}
+
+.kd-dir__name {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  font-size: 11.5px;
+}
+
+.kd-dir__count {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.kd-file {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 12px 5px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-file:hover {
+  background: var(--kd-hover);
+}
+
+.kd-file[data-selected] {
+  background: var(--kd-active);
+}
+
+.kd-file[data-selected] .kd-trunk {
+  transform: scaleY(1);
+}
+
+.kd-file__mark {
+  flex: 0 0 auto;
+  width: 14px;
+  text-align: center;
+  font-family: var(--kd-font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--kd-muted);
+}
+
+.kd-file__mark--added,
+.kd-file__mark--untracked {
+  color: var(--kd-accent);
+}
+.kd-file__mark--deleted {
+  color: var(--kd-danger);
+}
+.kd-file__mark--renamed,
+.kd-file__mark--copied {
+  color: var(--kd-accent-2);
+}
+
+.kd-file__name {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.kd-file__counts {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+  font-family: var(--kd-font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-file__add {
+  color: var(--kd-accent);
+}
+.kd-file__del {
+  color: var(--kd-danger);
+}
+
+.kd-file__binary {
+  flex: 0 0 auto;
+  color: var(--kd-muted);
+  font-size: 10px;
+}
+
+.kd-nochanges,
+.kd-nofile {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  height: 100%;
+  padding: 24px;
+  color: var(--kd-muted);
+  text-align: center;
+  animation: kd-fade-in var(--kd-dur-slow) var(--kd-ease-out);
+}
+
+.kd-nochanges p,
+.kd-nofile p {
+  margin: 0;
+}
+
+.kd-nochanges small {
+  font-family: var(--kd-font-mono);
+  font-size: 10.5px;
+  opacity: 0.75;
+}
+
+/* ==========================================================================
+   diff
+   ========================================================================== */
+
+.kd-diffpane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.kd-difftool {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 10px 7px 16px;
+  border-bottom: 1px solid var(--kd-border);
+  background: var(--kd-panel);
+}
+
+.kd-difftool__path {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--kd-font-mono);
+  font-size: 12px;
+}
+
+.kd-difftool__old {
+  color: var(--kd-muted);
+  text-decoration: line-through;
+}
+
+.kd-difftool__stat {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+  font-family: var(--kd-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-difftool__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.kd-seg {
+  padding: 4px 10px;
+  border: 1px solid var(--kd-border-strong);
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: var(--kd-fg-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-seg:hover {
+  background: var(--kd-hover);
+}
+
+.kd-notice {
+  padding: 24px;
+  color: var(--kd-muted);
+  text-align: center;
+}
+
+.kd-diff {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 40px;
+  font-family: var(--kd-font-mono);
+  font-size: var(--kd-code-size);
+  line-height: var(--kd-line-h);
+  /* 等幅でも合字が入ると != が ≠ になり、diff の読み違いを生む。 */
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0, "liga" 0;
+  --kd-cols-unified: var(--kd-gutter) var(--kd-gutter) var(--kd-sign-w)
+    minmax(0, 1fr);
+  --kd-cols-split: var(--kd-gutter) var(--kd-sign-w) minmax(0, 1fr)
+    var(--kd-gutter) var(--kd-sign-w) minmax(0, 1fr);
+}
+
+.kd-diff__spacer {
+  position: relative;
+  width: 100%;
+}
+
+.kd-diff__slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.kd-diff-row {
+  display: grid;
+  grid-template-columns: var(--kd-cols-unified);
+  align-items: center;
+  width: max-content;
+  min-width: 100%;
+  height: var(--kd-line-h);
+  white-space: pre;
+}
+
+.kd-diff[data-mode="split"] .kd-diff-row--split {
+  grid-template-columns: var(--kd-cols-split);
+}
+
+/* 折り返しを有効にすると行高が可変になる。仮想化は切ってある。 */
+.kd-diff[data-wrap] .kd-diff-row {
+  height: auto;
+  min-height: var(--kd-line-h);
+  white-space: pre-wrap;
+  word-break: break-word;
+  align-items: start;
+}
+
+/* 仮想化は行 DOM を再利用するので、スクロール中に色が補間され続けると濁る。 */
+.kd-diff[data-scrolling] .kd-diff-row,
+.kd-diff[data-scrolling] .kd-diff-row * {
+  transition: none !important;
+}
+
+.kd-diff-row[data-kind="add"] {
+  background: var(--kd-diff-add-bg);
+}
+.kd-diff-row[data-kind="del"] {
+  background: var(--kd-diff-del-bg);
+}
+
+/* split は行ではなく片側ずつ色を付ける。 */
+.kd-num[data-kind="add"],
+.kd-sign[data-kind="add"],
+.kd-cell[data-kind="add"] {
+  background: var(--kd-diff-add-bg);
+}
+.kd-num[data-kind="del"],
+.kd-sign[data-kind="del"],
+.kd-cell[data-kind="del"] {
+  background: var(--kd-diff-del-bg);
+}
+
+/* 行内差分は背景だけを濃くし、文字色はトークンに任せる。
+   文字色 = 構文、背景 = 差分、という 2 層に分けてあるので競合しない。 */
+.kd-diff-row[data-kind="add"] [data-emph],
+.kd-cell[data-kind="add"] [data-emph] {
+  background: var(--kd-diff-add-emph);
+  border-radius: 2px;
+}
+.kd-diff-row[data-kind="del"] [data-emph],
+.kd-cell[data-kind="del"] [data-emph] {
+  background: var(--kd-diff-del-emph);
+  border-radius: 2px;
+}
+
+/* 沈めたトークンは強調帯の上で読めなくなるので、そこだけ本文色へ戻す。 */
+.kd-t-comment[data-emph],
+.kd-t-punctuation[data-emph] {
+  color: var(--kd-fg-code);
+  font-style: normal;
+}
+
+.kd-num {
+  padding-right: 8px;
+  text-align: right;
+  color: var(--kd-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  position: sticky;
+  left: 0;
+  background: var(--kd-bg);
+}
+
+.kd-diff-row[data-kind="add"] .kd-num {
+  background: transparent;
+}
+.kd-diff-row[data-kind="del"] .kd-num {
+  background: transparent;
+}
+
+.kd-sign {
+  text-align: center;
+  color: var(--kd-muted);
+  user-select: none;
+}
+
+.kd-cell,
+.kd-code {
+  min-width: 0;
+  padding-right: 16px;
+}
+
+.kd-code--empty {
+  background: color-mix(in srgb, var(--kd-muted) 6%, transparent);
+}
+
+.kd-nonewline {
+  margin-left: 6px;
+  color: var(--kd-accent-2);
+  opacity: 0.8;
+}
+
+.kd-diff-row--hunk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--kd-muted) 10%, transparent);
+  color: var(--kd-muted);
+  border-top: 1px solid var(--kd-border);
+  border-bottom: 1px solid var(--kd-border);
+}
+
+.kd-hunk__range {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-hunk__ctx {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+/* 構文トークンの色。テーマの切替は変数の差し替えだけで済む。 */
+.kd-t-keyword { color: var(--kd-t-keyword); }
+.kd-t-string { color: var(--kd-t-string); }
+.kd-t-comment { color: var(--kd-t-comment); font-style: italic; }
+.kd-t-number { color: var(--kd-t-number); }
+.kd-t-function { color: var(--kd-t-function); }
+.kd-t-type { color: var(--kd-t-type); }
+.kd-t-variable { color: var(--kd-t-variable); }
+.kd-t-constant { color: var(--kd-t-constant); }
+.kd-t-operator { color: var(--kd-t-operator); }
+.kd-t-punctuation { color: var(--kd-t-punctuation); }
+.kd-t-tag { color: var(--kd-t-tag); }
+.kd-t-attribute { color: var(--kd-t-attribute); }
+
+/* ==========================================================================
    空状態: 初回起動
    ========================================================================== */
 

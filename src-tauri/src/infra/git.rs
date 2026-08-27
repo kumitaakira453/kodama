@@ -260,6 +260,63 @@ impl Git {
         Ok(t.to_string())
     }
 
+    /// unified diff を取る。
+    ///
+    /// `-M` で rename を 1 件にまとめ、`--no-ext-diff` / `--no-textconv` で外部ツールと
+    /// textconv を通さない。textconv 経由の出力は行番号が実ファイルと合わなくなる。
+    /// マージコミットの combined diff（`@@@` の 3 列）は 2-way 指定なので現れない。
+    pub fn diff_patch(&self, worktree: &str, spec_args: &[String], context: u32) -> KdResult<String> {
+        let unified = format!("-U{context}");
+        let mut args: Vec<&str> = vec![
+            "diff",
+            "-M",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--no-color",
+            &unified,
+        ];
+        for a in spec_args {
+            args.push(a);
+        }
+        self.run(worktree, &args, true)
+    }
+
+    /// 未追跡ファイルの一覧。NUL 区切りで受けるので改行を含む名前でも壊れない。
+    pub fn untracked_paths(&self, worktree: &str) -> Vec<String> {
+        self.run(
+            worktree,
+            &["ls-files", "--others", "--exclude-standard", "-z"],
+            false,
+        )
+        .unwrap_or_default()
+        .split('\0')
+        .filter(|p| !p.is_empty())
+        .map(str::to_string)
+        .collect()
+    }
+
+    /// 未追跡ファイルを「全行追加」として出す。
+    ///
+    /// `--no-index` は差分があると exit 1 を返すので、終了コードは見ない。
+    pub fn untracked_patch(&self, worktree: &str, path: &str, context: u32) -> KdResult<String> {
+        let unified = format!("-U{context}");
+        self.run(
+            worktree,
+            &[
+                "diff",
+                "--no-index",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--no-color",
+                &unified,
+                "--",
+                "/dev/null",
+                path,
+            ],
+            false,
+        )
+    }
+
     /// コミットの第 1 親。親が無い（最初のコミット）なら空ツリーを返す。
     pub fn first_parent(&self, worktree: &str, sha: &str) -> String {
         self.run(worktree, &["rev-parse", "--verify", "--quiet", &format!("{sha}^")], false)
