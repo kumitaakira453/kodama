@@ -1,0 +1,290 @@
+@import "tailwindcss";
+@import "material-symbols/rounded.css";
+
+/* ==========================================================================
+   Tier 1: 原始色
+   テーマに依存しない絶対値。参照してよいのは Tier 2 の意味色だけで、
+   コンポーネントからは直接触らない。
+   ========================================================================== */
+
+:root {
+  /* 樹皮 — 暗い側のニュートラル */
+  --kd-c-bark-900: #131210;
+  --kd-c-bark-800: #1a1815;
+  --kd-c-bark-700: #201e1a;
+  --kd-c-bark-600: #272420;
+  --kd-c-bark-400: #8d8474;
+  --kd-c-bark-300: #a09889;
+  --kd-c-bark-200: #c9a38e;
+
+  /* 和紙・白木 — 明るい側のニュートラル */
+  --kd-c-paper-50: #fcfaf5;
+  --kd-c-paper-100: #f6f3ec;
+  --kd-c-paper-200: #f1eee5;
+  --kd-c-paper-300: #ded7c9;
+  --kd-c-paper-600: #6e685c;
+  --kd-c-paper-700: #3f3b33;
+  --kd-c-paper-800: #35322b;
+  --kd-c-paper-900: #23211c;
+  --kd-c-paper-50-fg: #f2eee5;
+  --kd-c-paper-100-fg: #d4cec2;
+
+  /* 若葉 — 追加・完了・選択 */
+  --kd-c-leaf-300: #a8ce8c;
+  --kd-c-leaf-400: #7fc79a;
+  --kd-c-leaf-500: #5fbf7d;
+  --kd-c-leaf-700: #2e7d4f;
+  --kd-c-leaf-800: #2c7a55;
+  --kd-c-leaf-900: #3f7a3a;
+
+  /* 木漏れ日 — 注意を引き直す第 3 の軸 */
+  --kd-c-sun-300: #e0b457;
+  --kd-c-sun-400: #dfb35f;
+  --kd-c-sun-700: #8f6210;
+  --kd-c-sun-800: #8a5e12;
+
+  /* 紅葉 — 削除・危険 */
+  --kd-c-momiji-300: #e27d63;
+  --kd-c-momiji-400: #e0705c;
+  --kd-c-momiji-700: #c0442e;
+  --kd-c-momiji-800: #b4432a;
+
+  /* 苔・新芽 */
+  --kd-c-moss-300: #c7d98f;
+  --kd-c-moss-700: #5a7a1e;
+
+  /* 空・水・藤 */
+  --kd-c-sky-300: #8fbce8;
+  --kd-c-sky-700: #1f5fa8;
+  --kd-c-water-300: #7fc7d9;
+  --kd-c-water-700: #106b7e;
+  --kd-c-violet-300: #c4a5ec;
+  --kd-c-violet-700: #7043b0;
+}
+
+/* ==========================================================================
+   Tier 2: 意味色
+   コンポーネントが参照するのはここだけ。テーマ切替はこの表の差し替えで済む。
+   ========================================================================== */
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --kd-bg: var(--kd-c-bark-800);
+  --kd-sidebar: var(--kd-c-bark-900);
+  --kd-panel: var(--kd-c-bark-700);
+  --kd-elevated: var(--kd-c-bark-600);
+
+  --kd-border: rgb(255 255 255 / 0.09);
+  --kd-border-strong: rgb(255 255 255 / 0.17);
+  --kd-hover: rgb(255 255 255 / 0.055);
+  --kd-active: rgb(255 255 255 / 0.1);
+
+  --kd-fg: var(--kd-c-paper-50-fg);
+  --kd-fg-dim: var(--kd-c-paper-100-fg);
+  --kd-muted: var(--kd-c-bark-300);
+  --kd-fg-code: var(--kd-c-paper-50-fg);
+
+  --kd-accent: var(--kd-c-leaf-500);
+  --kd-accent-2: var(--kd-c-sun-300);
+  --kd-danger: var(--kd-c-momiji-400);
+
+  /* diff の 4 色。行背景は add / del とも α .10 で揃え、強調はその上に重ねる。
+     暗い側は .26〜.28 で emph : bg のコントラストが 1.37〜1.39 に収まる。 */
+  --kd-diff-add-bg: rgb(95 191 125 / 0.1);
+  --kd-diff-add-emph: rgb(95 191 125 / 0.26);
+  --kd-diff-del-bg: rgb(224 112 92 / 0.1);
+  --kd-diff-del-emph: rgb(224 112 92 / 0.28);
+
+  --kd-t-keyword: var(--kd-c-momiji-300);
+  --kd-t-string: var(--kd-c-leaf-300);
+  --kd-t-comment: #948b79;
+  --kd-t-number: var(--kd-c-sky-300);
+  --kd-t-function: var(--kd-c-violet-300);
+  --kd-t-type: var(--kd-c-sun-400);
+  --kd-t-variable: var(--kd-c-paper-300);
+  --kd-t-constant: var(--kd-c-water-300);
+  --kd-t-operator: var(--kd-c-bark-200);
+  --kd-t-punctuation: var(--kd-c-bark-400);
+  --kd-t-tag: var(--kd-c-leaf-400);
+  --kd-t-attribute: var(--kd-c-moss-300);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --kd-bg: var(--kd-c-paper-50);
+  --kd-sidebar: var(--kd-c-paper-200);
+  --kd-panel: var(--kd-c-paper-100);
+  --kd-elevated: #ffffff;
+
+  --kd-border: rgb(60 50 30 / 0.11);
+  --kd-border-strong: rgb(60 50 30 / 0.2);
+  --kd-hover: rgb(60 50 30 / 0.045);
+  --kd-active: rgb(60 50 30 / 0.085);
+
+  --kd-fg: var(--kd-c-paper-900);
+  --kd-fg-dim: var(--kd-c-paper-700);
+  --kd-muted: var(--kd-c-paper-600);
+  --kd-fg-code: var(--kd-c-paper-900);
+
+  --kd-accent: var(--kd-c-leaf-700);
+  --kd-accent-2: var(--kd-c-sun-700);
+  --kd-danger: var(--kd-c-momiji-700);
+
+  /* 明るい側は輝度の刻みが圧縮されるため、同じ強調比を得るには α を大きく取る。 */
+  --kd-diff-add-bg: rgb(46 125 79 / 0.1);
+  --kd-diff-add-emph: rgb(46 125 79 / 0.34);
+  --kd-diff-del-bg: rgb(192 68 46 / 0.1);
+  --kd-diff-del-emph: rgb(192 68 46 / 0.34);
+
+  --kd-t-keyword: var(--kd-c-momiji-800);
+  --kd-t-string: var(--kd-c-leaf-900);
+  --kd-t-comment: #78715f;
+  --kd-t-number: var(--kd-c-sky-700);
+  --kd-t-function: var(--kd-c-violet-700);
+  --kd-t-type: var(--kd-c-sun-800);
+  --kd-t-variable: var(--kd-c-paper-800);
+  --kd-t-constant: var(--kd-c-water-700);
+  --kd-t-operator: #7a5a46;
+  --kd-t-punctuation: var(--kd-c-paper-600);
+  --kd-t-tag: var(--kd-c-leaf-800);
+  --kd-t-attribute: var(--kd-c-moss-700);
+}
+
+/* ==========================================================================
+   非色トークン
+   ========================================================================== */
+
+:root {
+  --kd-font-mono: ui-monospace, "SF Mono", Menlo, Monaco, "Hiragino Sans",
+    monospace;
+  --kd-font-sans: system-ui, -apple-system, "Hiragino Sans", sans-serif;
+
+  --kd-code-size: 12.5px;
+  /* 20px は 4 条件を同時に満たす最小値。仮想化のため整数 px 固定が要り、
+     12.5px に対し 1.6 で全角の高さが収まり、2 で割り切れ、840px の窓で 39 行出る。 */
+  --kd-line-h: 20px;
+  --kd-sign-w: 16px;
+  --kd-digits: 3;
+  --kd-gutter: max(3ch, calc(var(--kd-digits) * 1ch + 12px));
+  /* macOS の信号機ボタンを避ける高さ。 */
+  --kd-titlebar-pad: 30px;
+  --kd-titlebar-h: 52px;
+
+  --kd-radius-sm: 6px;
+  --kd-radius-md: 10px;
+  --kd-radius-lg: 14px;
+
+  --kd-dur-instant: 80ms;
+  --kd-dur-fast: 140ms;
+  --kd-dur-base: 220ms;
+  --kd-dur-slow: 420ms;
+  --kd-dur-celebrate: 900ms;
+
+  --kd-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --kd-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --kd-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --kd-ease-sun: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --kd-select-bg: color-mix(in srgb, var(--kd-accent) 18%, transparent);
+  --kd-komorebi: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--kd-accent-2) 45%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+/* 動きを抑える指定。duration を 1 か所で潰せば全経路に効く。
+   演出は「消す」のではなく「時間を 0 にする」ので、結果の絵は変わらない。 */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --kd-dur-instant: 1ms;
+    --kd-dur-fast: 1ms;
+    --kd-dur-base: 1ms;
+    --kd-dur-slow: 1ms;
+    --kd-dur-celebrate: 1ms;
+  }
+}
+
+:root[data-motion="reduced"] {
+  --kd-dur-instant: 1ms;
+  --kd-dur-fast: 1ms;
+  --kd-dur-base: 1ms;
+  --kd-dur-slow: 1ms;
+  --kd-dur-celebrate: 1ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kd-spinner,
+  .kd-leaf,
+  .kd-drift {
+    animation: none;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   基底
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--kd-bg);
+  color: var(--kd-fg);
+  font-family: var(--kd-font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--kd-select-bg);
+}
+
+/* スクロールバーは常時見えると diff のノイズになるので細く沈める。 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--kd-border-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--kd-muted);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.material-symbols-rounded {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+  font-size: 18px;
+  line-height: 1;
+  user-select: none;
+}
