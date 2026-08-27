@@ -2,10 +2,15 @@ import { useAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 import type { PrimitiveAtom } from "jotai";
 
-/** 3 ペインそれぞれの最小幅。合計 752 + リサイザ分が窓の最小幅の根拠。 */
-export const MIN_TREE = 200;
-export const MIN_FILES = 220;
-export const MIN_DIFF = 320;
+/**
+ * 3 ペインそれぞれの最小幅。合計 900 + リサイザ分が窓の最小幅の根拠。
+ *
+ * diff の最小幅は「行番号 50px + 記号 20px + コード 40 桁ぶん」を左右 2 列ぶん
+ * 置ける量から決めている。これを切ると split 表示が実用にならない。
+ */
+export const MIN_TREE = 240;
+export const MIN_FILES = 280;
+export const MIN_DIFF = 380;
 
 interface PaneResize {
   treeWidth: number;

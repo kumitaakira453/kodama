@@ -62,13 +62,13 @@ export const hideViewedAtom = atomWithStorage<boolean>(
 );
 export const treeWidthAtom = atomWithStorage<number>(
   "kodama.treeWidth",
-  260,
+  288,
   undefined,
   sync,
 );
 export const filesWidthAtom = atomWithStorage<number>(
   "kodama.filesWidth",
-  300,
+  340,
   undefined,
   sync,
 );
@@ -96,7 +96,7 @@ export const commitSelectionAtom = atomWithStorage<CommitSelection>(
 /** 中ペインを上下に分ける境界。コミット一覧の高さ。 */
 export const commitPaneHeightAtom = atomWithStorage<number>(
   "kodama.commitPaneHeight",
-  240,
+  300,
   undefined,
   sync,
 );

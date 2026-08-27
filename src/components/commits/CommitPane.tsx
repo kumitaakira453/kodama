@@ -35,19 +35,26 @@ export function CommitPane() {
   const range = resolveRange(selection, commits);
 
   /**
-   * コミット行のクリック。Shift を押していれば直前のアンカーから連続範囲を伸ばす。
-   * 飛び飛びの選択は許さない — 「この 3 つだけの合成差分」に相当する git の
-   * 表現が無く、意味が曖昧になるため。
+   * チェックボックス。起点は保ったまま、押した行まで選択を伸ばす / 縮める。
+   * 間を飛ばして押すと、あいだのコミットも選択に入る。
+   *
+   * 飛び飛びの選択は扱わない。「この n 件だけの合成差分」に相当する git の表現が
+   * 無く、cherry-pick 相当の合成が要るうえ、結果が競合しうる。
    */
-  const clickCommit = useCallback(
-    (sha: string, shiftKey: boolean) => {
-      setSelection((prev) => {
-        if (shiftKey && prev.kind === "commits") {
-          return { kind: "commits", anchor: prev.anchor, focus: sha };
-        }
-        return { kind: "commits", anchor: sha, focus: sha };
-      });
+  const toggleCommit = useCallback(
+    (sha: string) => {
+      setSelection((prev) =>
+        prev.kind === "commits"
+          ? { kind: "commits", anchor: prev.anchor, focus: sha }
+          : { kind: "commits", anchor: sha, focus: sha },
+      );
     },
+    [setSelection],
+  );
+
+  /** 行本体は「その 1 件だけ」を選ぶ。範囲を作り直したいときの起点になる。 */
+  const selectOnly = useCallback(
+    (sha: string) => setSelection({ kind: "commits", anchor: sha, focus: sha }),
     [setSelection],
   );
 
@@ -77,12 +84,9 @@ export function CommitPane() {
         {selection.kind === "commits" ? (
           <button
             className="kd-commits__hint"
-            onClick={() =>
-              setSelection({ kind: "pseudo", id: "uncommitted" })
-            }
-            title="選択を解除"
+            onClick={() => setSelection({ kind: "pseudo", id: "uncommitted" })}
           >
-            Shift+クリックで範囲
+            選択を解除
           </button>
         ) : null}
       </div>
@@ -109,10 +113,8 @@ export function CommitPane() {
             key={c.sha}
             commit={c}
             selected={isInSelection(c.sha, selection, commits)}
-            isEdge={
-              range?.newest.sha === c.sha || range?.oldest.sha === c.sha
-            }
-            onClick={(e) => clickCommit(c.sha, e.shiftKey)}
+            onToggle={() => toggleCommit(c.sha)}
+            onSelectOnly={() => selectOnly(c.sha)}
           />
         ))}
 
@@ -144,18 +146,28 @@ function PseudoRow({
   const empty = detail.count === 0;
 
   return (
-    <button
+    <div
       className="kd-crow kd-crow--pseudo"
       data-selected={selected || undefined}
       data-empty={empty || undefined}
-      onClick={onSelect}
-      title={detail.title}
     >
       <span className="kd-trunk" aria-hidden />
-      <Icon name={icon} size={15} className="kd-crow__icon" />
-      <span className="kd-crow__subject">{PSEUDO_LABELS[id]}</span>
-      <span className="kd-crow__meta">{detail.suffix}</span>
-    </button>
+      {/* コミットの範囲選択とは排他なので、チェックではなくラジオで示す。 */}
+      <label className="kd-check">
+        <input
+          type="radio"
+          name="kd-revision"
+          checked={selected}
+          onChange={onSelect}
+          aria-label={PSEUDO_LABELS[id]}
+        />
+      </label>
+      <button className="kd-crow__body" onClick={onSelect} title={detail.title}>
+        <Icon name={icon} size={15} className="kd-crow__icon" />
+        <span className="kd-crow__subject">{PSEUDO_LABELS[id]}</span>
+        <span className="kd-crow__meta">{detail.suffix}</span>
+      </button>
+    </div>
   );
 }
 
@@ -192,26 +204,34 @@ function pseudoDetail(
 function CommitRow({
   commit,
   selected,
-  isEdge,
-  onClick,
+  onToggle,
+  onSelectOnly,
 }: {
   commit: CommitInfo;
   selected: boolean;
-  isEdge: boolean;
-  onClick: (e: React.MouseEvent) => void;
+  onToggle: () => void;
+  onSelectOnly: () => void;
 }) {
   return (
-    <button
-      className="kd-crow"
-      data-selected={selected || undefined}
-      data-edge={isEdge || undefined}
-      onClick={onClick}
-      title={`${commit.sha}\n${commit.author}\n${commit.subject}`}
-    >
+    <div className="kd-crow" data-selected={selected || undefined}>
       <span className="kd-trunk" aria-hidden />
-      <span className="kd-crow__sha">{commit.shortSha}</span>
-      <span className="kd-crow__subject">{commit.subject}</span>
-      <span className="kd-crow__meta">{commit.relative}</span>
-    </button>
+      <label className="kd-check" title="ここまで選択を伸ばす">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggle}
+          aria-label={`${commit.shortSha} までを選択`}
+        />
+      </label>
+      <button
+        className="kd-crow__body"
+        onClick={onSelectOnly}
+        title={`${commit.sha}\n${commit.author}\n${commit.subject}\n\nクリックでこの 1 件だけを選択`}
+      >
+        <span className="kd-crow__sha">{commit.shortSha}</span>
+        <span className="kd-crow__subject">{commit.subject}</span>
+        <span className="kd-crow__meta">{commit.relative}</span>
+      </button>
+    </div>
   );
 }

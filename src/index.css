@@ -162,20 +162,26 @@
     monospace;
   --kd-font-sans: system-ui, -apple-system, "Hiragino Sans", sans-serif;
 
-  --kd-code-size: 12.5px;
-  /* 20px は 4 条件を同時に満たす最小値。仮想化のため整数 px 固定が要り、
-     12.5px に対し 1.6 で全角の高さが収まり、2 で割り切れ、840px の窓で 39 行出る。 */
-  --kd-line-h: 20px;
-  --kd-sign-w: 16px;
+  --kd-code-size: 12px;
+  /* 24px。整数 px 固定は仮想化の見積もりが厳密に当たる条件で、12px に対し 2.0 は
+     日本語の全角が窮屈にならない下限。GitHub の diff も同じ 24px を採る。 */
+  --kd-line-h: 24px;
+  --kd-sign-w: 20px;
   --kd-digits: 3;
-  --kd-gutter: max(3ch, calc(var(--kd-digits) * 1ch + 12px));
+  /* 行番号は最低でも 2 桁ぶんの余白を確保する。桁が増えても幅が跳ねない。 */
+  --kd-gutter: max(50px, calc(var(--kd-digits) * 1ch + 20px));
+  /* コード本文の左右。詰めるとレビュー中の視線が行末で折り返しにくい。 */
+  --kd-code-pad: 16px;
   /* macOS の信号機ボタンを避ける高さ。 */
   --kd-titlebar-pad: 30px;
-  --kd-titlebar-h: 52px;
+  --kd-titlebar-h: 56px;
+  /* 一覧の行。密度はここで一括して決める。 */
+  --kd-row-py: 8px;
+  --kd-row-px: 14px;
 
   --kd-radius-sm: 6px;
-  --kd-radius-md: 10px;
-  --kd-radius-lg: 14px;
+  --kd-radius-md: 8px;
+  --kd-radius-lg: 12px;
 
   --kd-dur-instant: 80ms;
   --kd-dur-fast: 140ms;

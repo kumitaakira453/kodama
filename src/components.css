@@ -429,7 +429,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px;
+  padding: 10px var(--kd-row-px);
   color: var(--kd-muted);
   border-bottom: 1px solid var(--kd-border);
 }
@@ -502,7 +502,7 @@
     "subject subject";
   gap: 2px 8px;
   width: 100%;
-  padding: 6px 10px 7px 20px;
+  padding: var(--kd-row-py) var(--kd-row-px) var(--kd-row-py) 22px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -674,7 +674,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px 7px;
+  padding: 10px var(--kd-row-px) 9px;
   border-bottom: 1px solid var(--kd-border);
   color: var(--kd-muted);
 }
@@ -733,21 +733,45 @@
   background: var(--kd-border);
 }
 
-/* コミット / 疑似エントリの行。 */
+/* コミット / 疑似エントリの行。チェックは範囲の伸縮、行本体は単独選択。 */
 .kd-crow {
   position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-check {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  align-self: stretch;
+  cursor: pointer;
+}
+
+.kd-check input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--kd-accent);
+  cursor: pointer;
+}
+
+.kd-crow__body {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  padding: 5px 10px 5px 18px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--kd-row-py) var(--kd-row-px) var(--kd-row-py) 0;
   border: 0;
   background: transparent;
   color: inherit;
   cursor: pointer;
   text-align: left;
-  transition: background var(--kd-dur-instant) var(--kd-ease-out);
 }
 
 .kd-crow:hover {
@@ -758,13 +782,9 @@
   background: var(--kd-active);
 }
 
-/* 範囲の途中の行は幹を途切れさせない。両端だけ丸めて範囲の始点終点を示す。 */
+/* 選択中の行は幹でつながる。範囲の途中も含めて 1 本の線に見える。 */
 .kd-crow[data-selected] .kd-trunk {
   transform: scaleY(1);
-}
-
-.kd-crow[data-edge] .kd-trunk {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--kd-accent) 60%, transparent);
 }
 
 .kd-crow[data-empty] {
@@ -813,7 +833,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px 7px;
+  padding: 10px var(--kd-row-px) 9px;
   border-bottom: 1px solid var(--kd-border);
   color: var(--kd-muted);
   font-size: 11px;
@@ -842,7 +862,7 @@
   align-items: center;
   gap: 4px;
   width: 100%;
-  padding: 5px 12px 5px 10px;
+  padding: 6px var(--kd-row-px) 6px 10px;
   border: 0;
   background: transparent;
   color: var(--kd-muted);
@@ -873,7 +893,7 @@
   align-items: center;
   gap: 7px;
   width: 100%;
-  padding: 5px 12px 5px 10px;
+  padding: 6px var(--kd-row-px) 6px 10px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -982,7 +1002,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 7px 10px 7px 16px;
+  padding: 10px 10px 10px var(--kd-code-pad);
   border-bottom: 1px solid var(--kd-border);
   background: var(--kd-panel);
 }
@@ -1124,12 +1144,12 @@
 .kd-diff-row[data-kind="add"] [data-emph],
 .kd-cell[data-kind="add"] [data-emph] {
   background: var(--kd-diff-add-emph);
-  border-radius: 2px;
+  border-radius: 3px;
 }
 .kd-diff-row[data-kind="del"] [data-emph],
 .kd-cell[data-kind="del"] [data-emph] {
   background: var(--kd-diff-del-emph);
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 /* 沈めたトークンは強調帯の上で読めなくなるので、そこだけ本文色へ戻す。 */
@@ -1167,7 +1187,8 @@
 .kd-cell,
 .kd-code {
   min-width: 0;
-  padding-right: 16px;
+  padding-right: var(--kd-code-pad);
+  padding-left: 4px;
 }
 
 .kd-code--empty {
@@ -1184,7 +1205,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 16px;
+  padding: 0 var(--kd-code-pad);
   background: color-mix(in srgb, var(--kd-muted) 10%, transparent);
   color: var(--kd-muted);
   border-top: 1px solid var(--kd-border);
