@@ -2336,6 +2336,16 @@ button.kd-row__expand:hover {
   opacity: 0.5;
 }
 
+/* 縦に並べたときは行番号が 2 つ並ぶ。両方に印を出すと、1 行に対して 2 つ
+   足せるように見える。誘いは変更後の側だけに出す。変更前の側に付けたい
+   ときは、その行番号に触れれば出る。 */
+.kd-canvas__scroll[data-mode="unified"]
+  .kd-row:hover
+  .kd-num:first-child:not(:hover)
+  .kd-num__add {
+  opacity: 0;
+}
+
 /* 行番号まで来たら、その側に指摘が付くことを確定して見せる。 */
 .kd-num--pick:hover .kd-num__add {
   opacity: 1;
