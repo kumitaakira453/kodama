@@ -56,7 +56,7 @@ export function RevisionMenu() {
       >
         <Icon name="difference" size={15} />
         <span className="kd-dd__label">
-          {describeSelection(selection, commits, defaultBase)}
+          {describeSelection(selection, commits)}
         </span>
         <Icon name="expand_more" size={16} />
       </button>
@@ -133,11 +133,10 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
           detail={
             defaultBase
               ? `${defaultBase} との分岐点から、未コミットの変更まで`
-              : "比較元のブランチが見つかりません"
+              : "最初のコミットから、未コミットの変更まで"
           }
           icon="all_inclusive"
           checked={draft ? covers(draft, "everything") : false}
-          disabled={!defaultBase}
           onToggle={() => togglePseudo("everything")}
         />
 
@@ -168,10 +167,10 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
               detail={
                 defaultBase
                   ? `${defaultBase} との分岐点から ${commits.length} コミット`
-                  : "比較元のブランチが見つかりません"
+                  : `最初のコミットから ${commits.length} コミット`
               }
               checked={allCommits}
-              disabled={!defaultBase}
+              disabled={commits.length === 0}
               onToggle={() => togglePseudo("branch")}
             />
 

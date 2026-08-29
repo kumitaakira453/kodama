@@ -53,16 +53,23 @@ export function buildSpec(
       case "unstaged":
         return { kind: "unstaged" };
       case "everything":
-        if (!defaultBase) return null;
         return { kind: "everything", base: defaultBase };
-      case "branch":
-        if (!defaultBase) return null;
-        return {
-          kind: "range",
-          base: defaultBase,
-          target: "HEAD",
-          mergeBase: true,
-        };
+      case "branch": {
+        if (defaultBase) {
+          return {
+            kind: "range",
+            base: defaultBase,
+            target: "HEAD",
+            mergeBase: true,
+          };
+        }
+        // 分岐元が無いリポジトリでは、一覧の端から端まで。最初のコミットの
+        // 親は空ツリーとして解決されるので、全部が出る。
+        const newest = commits[0];
+        const oldest = commits[commits.length - 1];
+        if (!newest || !oldest) return null;
+        return { kind: "commitRange", oldest: oldest.sha, newest: newest.sha };
+      }
     }
   }
 
@@ -76,7 +83,7 @@ export function buildSpec(
   // 食い違う。取り込んだぶんの変更まで差分に入ってしまう。分岐点を基準に
   // すれば、そのブランチで積んだ変更だけが残る。
   if (defaultBase && commits.length > 0 && range.count === commits.length) {
-    return { kind: "range", base: defaultBase, target: "HEAD", mergeBase: true };
+    return buildSpec({ kind: "pseudo", id: "branch" }, commits, defaultBase);
   }
 
   return {
@@ -213,14 +220,8 @@ function spanSelection(
 export function describeSelection(
   selection: CommitSelection,
   commits: CommitInfo[],
-  defaultBase: string | null,
 ): string {
-  if (selection.kind === "pseudo") {
-    const needsBase =
-      selection.id === "branch" || selection.id === "everything";
-    if (needsBase && !defaultBase) return "比較元のブランチが見つかりません";
-    return PSEUDO_LABELS[selection.id];
-  }
+  if (selection.kind === "pseudo") return PSEUDO_LABELS[selection.id];
   const range = resolveRange(selection, commits);
   if (!range) return "コミットを選んでください";
   if (range.count === 1) return range.newest.subject;
@@ -238,11 +239,11 @@ export function explainSelection(
       case "everything":
         return defaultBase
           ? `${defaultBase} との分岐点から作業ツリーまで`
-          : "比較元のブランチが見つかりません";
+          : "最初のコミットから作業ツリーまで";
       case "branch":
         return defaultBase
           ? `${defaultBase} との分岐点から HEAD まで`
-          : "比較元のブランチが見つかりません";
+          : "最初のコミットから HEAD まで";
       case "uncommitted":
         return "HEAD から作業ツリーまで";
       case "staged":

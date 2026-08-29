@@ -72,8 +72,11 @@ export type DiffSpec =
   /** 連続したコミット群。oldest の第 1 親から newest までを見る。 */
   | { kind: "commitRange"; oldest: string; newest: string }
   | { kind: "range"; base: string; target: string; mergeBase: boolean }
-  /** 分岐点から作業ツリーまで。コミット済みと未コミットをまとめて見る。 */
-  | { kind: "everything"; base: string }
+  /**
+   * 分岐点から作業ツリーまで。コミット済みと未コミットをまとめて見る。
+   * base が null なら分岐元を持たないリポジトリで、最初のコミットから見る。
+   */
+  | { kind: "everything"; base: string | null }
   /** 全未コミット変更。 */
   | { kind: "uncommitted" }
   /** index と HEAD の差分。 */

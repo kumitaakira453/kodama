@@ -160,17 +160,12 @@ export function DiffCanvas({
    * その高さのぶん押し下げられ、越えないと届かなくなる。
    */
   const [selecting, setSelecting] = useState(false);
+  // なぞっているあいだは null で据え置く。selection をそのまま依存に入れると、
+  // 1 行なぞるたびに全ファイルの行を組み直すことになる。
+  const composerAt = selecting ? null : selection;
   const rows = useMemo(
-    () =>
-      buildRows(
-        files,
-        mode,
-        collapsed,
-        threads,
-        selecting ? null : selection,
-        expanded,
-      ),
-    [files, mode, collapsed, threads, selection, selecting, expanded],
+    () => buildRows(files, mode, collapsed, threads, composerAt, expanded),
+    [files, mode, collapsed, threads, composerAt, expanded],
   );
   const headerIndex = useMemo(() => fileHeaderIndex(rows), [rows]);
   const digits = useMemo(() => maxLineDigits(files), [files]);

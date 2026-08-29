@@ -17,7 +17,8 @@ pub enum DiffSpec {
         merge_base: bool,
     },
     /// 分岐点から作業ツリーまで。コミット済みと未コミットをまとめて見る。
-    Everything { base: String },
+    /// `base` が無いのは分岐元を持たないリポジトリで、最初のコミットから見る。
+    Everything { base: Option<String> },
     /// 全未コミット変更。HEAD と作業ツリーの差分に未追跡ファイルを足す。
     Uncommitted,
     /// index と HEAD の差分。
