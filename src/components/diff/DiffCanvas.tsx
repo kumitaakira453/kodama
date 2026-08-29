@@ -18,6 +18,7 @@ import type {
   AppTarget,
   DiffFile,
   DiffLine,
+  DiffLineKind,
   Side,
   ThreadInput,
   ThreadView,
@@ -580,17 +581,26 @@ const Row = memo(function Row({
 function Gutter({
   no,
   picked,
+  kind,
+  side,
   onPick,
 }: {
   no: number | null;
   picked: boolean;
+  /** 左右に並べたときは行ではなくセルごとに色を付けるので、種別をここに持つ。 */
+  kind?: DiffLineKind;
+  side?: Side;
   onPick: (extend: boolean) => void;
 }) {
-  if (no === null) return <span className="kd-num" />;
+  if (no === null) {
+    return <span className="kd-num" data-kind={kind} data-side={side} />;
+  }
   return (
     <button
       className="kd-num kd-num--pick"
       data-picked={picked || undefined}
+      data-kind={kind}
+      data-side={side}
       onClick={(e) => onPick(e.shiftKey)}
       title="この行に指摘する（Shift+クリックで範囲）"
     >
@@ -619,9 +629,9 @@ function SideCell({
   if (!line) {
     return (
       <>
-        <span className="kd-num kd-num--empty" />
-        <span className="kd-sign kd-sign--empty" />
-        <span className="kd-code kd-code--empty" />
+        <span className="kd-num kd-num--empty" data-side={side} />
+        <span className="kd-sign kd-sign--empty" data-side={side} />
+        <span className="kd-code kd-code--empty" data-side={side} />
       </>
     );
   }
@@ -638,6 +648,8 @@ function SideCell({
       <Gutter
         no={no}
         picked={picked}
+        kind={line.kind}
+        side={side}
         onPick={(extend) => {
           if (no === null) return;
           onGutter({
@@ -650,10 +662,10 @@ function SideCell({
           });
         }}
       />
-      <span className="kd-sign" data-kind={line.kind}>
+      <span className="kd-sign" data-kind={line.kind} data-side={side}>
         {sign(line)}
       </span>
-      <span className="kd-code" data-kind={line.kind}>
+      <span className="kd-code" data-kind={line.kind} data-side={side}>
         <DiffCode line={line} wordDiff={wordDiff} />
       </span>
     </>

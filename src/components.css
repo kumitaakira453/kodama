@@ -1036,6 +1036,11 @@
   grid-template-columns: var(--kd-cols-split);
 }
 
+/* 左右の境。無いと変更前後がひと続きの本文に見える。 */
+.kd-row--split .kd-code[data-side="old"] {
+  border-right: 1px solid var(--kd-border);
+}
+
 .kd-row[data-kind="add"] {
   background: var(--kd-diff-add-bg);
 }

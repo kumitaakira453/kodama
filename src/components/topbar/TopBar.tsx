@@ -8,6 +8,7 @@ import {
   settingsOpenAtom,
   sidebarOpenAtom,
   themeAtom,
+  viewModeAtom,
   type Theme,
 } from "../../state/atoms";
 import { IconButton } from "../ui/Button";
@@ -42,6 +43,7 @@ interface TopBarProps {
  */
 export function TopBar({ projects, progress, onReload }: TopBarProps) {
   const [theme, setTheme] = useAtom(themeAtom);
+  const [mode, setMode] = useAtom(viewModeAtom);
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
   const [projectId, setProjectId] = useAtom(selectedProjectIdAtom);
   const setWorktree = useSetAtom(selectedWorktreeAtom);
@@ -122,6 +124,13 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
       ) : null}
 
       <ProgressRing progress={progress} />
+
+      <IconButton
+        name="vertical_split"
+        label="左右に並べて見る (u)"
+        active={mode === "split"}
+        onClick={() => setMode(mode === "split" ? "unified" : "split")}
+      />
 
       <IconButton name="refresh" label="再読込 (⌘R)" onClick={onReload} />
       <IconButton
