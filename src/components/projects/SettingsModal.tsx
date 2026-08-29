@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import type { Project } from "../../lib/types";
 import { Button, IconButton } from "../ui/Button";
+import { Icon } from "../ui/Icon";
 import { Modal } from "../ui/Modal";
 
 interface SettingsModalProps {
@@ -26,13 +27,56 @@ export function SettingsModal({
   /** 名前を書き換え中のプロジェクト。 */
   const [editing, setEditing] = useState<string | null>(null);
 
-  /** その行を 1 つ動かす。順序は id の並びとして丸ごと渡す。 */
-  const move = (index: number, by: number) => {
-    const to = index + by;
-    if (to < 0 || to >= projects.length) return;
+  /**
+   * 掴んでいるあいだの並び。離すまで保存しない。
+   *
+   * HTML5 の drag & drop ではなくポインタで作る。webview では OS 側の
+   * ドラッグ処理と取り合いになり、環境によって drop が届かない。
+   */
+  const [order, setOrder] = useState<string[] | null>(null);
+  const [holding, setHolding] = useState<string | null>(null);
+  const grab = useRef<{ from: number; startY: number; rowH: number } | null>(
+    null,
+  );
+
+  const shown = order
+    ? order.flatMap((id) => projects.find((p) => p.id === id) ?? [])
+    : projects;
+
+  const onGrab = (e: React.PointerEvent, id: string, index: number) => {
+    const row = (e.currentTarget as HTMLElement).closest("li");
+    if (!row) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    grab.current = {
+      from: index,
+      startY: e.clientY,
+      rowH: row.getBoundingClientRect().height,
+    };
+    setOrder(projects.map((p) => p.id));
+    setHolding(id);
+  };
+
+  const onDragMove = (e: React.PointerEvent) => {
+    const g = grab.current;
+    if (!g || g.rowH <= 0) return;
+    // 行の高さは一定なので、動いた距離を段数に直せば移動先が決まる。
+    const steps = Math.round((e.clientY - g.startY) / g.rowH);
+    const to = Math.max(0, Math.min(projects.length - 1, g.from + steps));
     const ids = projects.map((p) => p.id);
-    [ids[index], ids[to]] = [ids[to], ids[index]];
-    onReorderProjects(ids);
+    ids.splice(to, 0, ...ids.splice(g.from, 1));
+    setOrder(ids);
+  };
+
+  const onRelease = () => {
+    if (!grab.current) return;
+    grab.current = null;
+    setHolding(null);
+    const next = order;
+    setOrder(null);
+    if (!next) return;
+    const before = projects.map((p) => p.id).join("\n");
+    if (next.join("\n") !== before) onReorderProjects(next);
   };
 
   return (
@@ -54,24 +98,23 @@ export function SettingsModal({
         </>
       }
     >
-      <ul className="kd-projlist">
-        {projects.map((project, index) => (
-          <li key={project.id} className="kd-projlist__item">
-            <span className="kd-projlist__move">
-              <IconButton
-                name="keyboard_arrow_up"
-                label="上へ"
-                size={16}
-                disabled={index === 0}
-                onClick={() => move(index, -1)}
-              />
-              <IconButton
-                name="keyboard_arrow_down"
-                label="下へ"
-                size={16}
-                disabled={index === projects.length - 1}
-                onClick={() => move(index, 1)}
-              />
+      <ul className="kd-projlist" data-dragging={holding ? "" : undefined}>
+        {shown.map((project, index) => (
+          <li
+            key={project.id}
+            className="kd-projlist__item"
+            data-held={project.id === holding || undefined}
+          >
+            <span
+              className="kd-projlist__handle"
+              title="掴んで並べ替える"
+              aria-label="掴んで並べ替える"
+              onPointerDown={(e) => onGrab(e, project.id, index)}
+              onPointerMove={onDragMove}
+              onPointerUp={onRelease}
+              onPointerCancel={onRelease}
+            >
+              <Icon name="drag_indicator" size={16} />
             </span>
 
             <div className="kd-projlist__text">

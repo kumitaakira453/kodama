@@ -1500,22 +1500,41 @@ button.kd-row__expand:hover {
   outline: none;
 }
 
-/* 並べ替えは上下 1 段ずつ。掴んで動かすより取りこぼしがない。 */
-.kd-projlist__move {
-  display: flex;
-  flex-direction: column;
+/* 掴んで並べ替える取っ手。 */
+.kd-projlist__handle {
+  display: grid;
+  place-items: center;
   flex: 0 0 auto;
-  margin-right: 2px;
-}
-
-.kd-projlist__move .kd-iconbtn {
   width: 22px;
-  height: 16px;
+  align-self: stretch;
+  color: var(--kd-muted);
+  cursor: grab;
+  /* 縦になぞる操作をスクロールに取られないようにする。 */
+  touch-action: none;
 }
 
-.kd-projlist__move .kd-iconbtn:disabled {
-  opacity: 0.3;
-  cursor: default;
+.kd-projlist__handle:hover {
+  color: var(--kd-fg);
+}
+
+.kd-projlist[data-dragging] .kd-projlist__handle {
+  cursor: grabbing;
+}
+
+/* 掴んでいる行だけ浮かせる。他の行はその場で入れ替わる。 */
+.kd-projlist__item[data-held] {
+  background: var(--kd-elevated);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.16);
+}
+
+/* 掴んでいるあいだは行の入れ替わりだけを見せる。地色の変化が重なると、
+   どれを持っているのか分からなくなる。 */
+.kd-projlist[data-dragging] .kd-projlist__item:hover {
+  background: transparent;
+}
+
+.kd-projlist[data-dragging] .kd-projlist__item[data-held]:hover {
+  background: var(--kd-elevated);
 }
 
 .kd-projlist__path {
