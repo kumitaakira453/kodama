@@ -1,4 +1,19 @@
-import { useRef, useState } from "react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { useState } from "react";
 
 import type { Project } from "../../lib/types";
 import { Button, IconButton } from "../ui/Button";
@@ -27,56 +42,20 @@ export function SettingsModal({
   /** 名前を書き換え中のプロジェクト。 */
   const [editing, setEditing] = useState<string | null>(null);
 
-  /**
-   * 掴んでいるあいだの並び。離すまで保存しない。
-   *
-   * HTML5 の drag & drop ではなくポインタで作る。webview では OS 側の
-   * ドラッグ処理と取り合いになり、環境によって drop が届かない。
-   */
-  const [order, setOrder] = useState<string[] | null>(null);
-  const [holding, setHolding] = useState<string | null>(null);
-  const grab = useRef<{ from: number; startY: number; rowH: number } | null>(
-    null,
+  // 少し動かしてから掴んだことにする。押しただけで並びが揺れると、
+  // 名前や削除を押したつもりの操作が並べ替えになってしまう。
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
-  const shown = order
-    ? order.flatMap((id) => projects.find((p) => p.id === id) ?? [])
-    : projects;
-
-  const onGrab = (e: React.PointerEvent, id: string, index: number) => {
-    const row = (e.currentTarget as HTMLElement).closest("li");
-    if (!row) return;
-    e.preventDefault();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    grab.current = {
-      from: index,
-      startY: e.clientY,
-      rowH: row.getBoundingClientRect().height,
-    };
-    setOrder(projects.map((p) => p.id));
-    setHolding(id);
-  };
-
-  const onDragMove = (e: React.PointerEvent) => {
-    const g = grab.current;
-    if (!g || g.rowH <= 0) return;
-    // 行の高さは一定なので、動いた距離を段数に直せば移動先が決まる。
-    const steps = Math.round((e.clientY - g.startY) / g.rowH);
-    const to = Math.max(0, Math.min(projects.length - 1, g.from + steps));
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
     const ids = projects.map((p) => p.id);
-    ids.splice(to, 0, ...ids.splice(g.from, 1));
-    setOrder(ids);
-  };
-
-  const onRelease = () => {
-    if (!grab.current) return;
-    grab.current = null;
-    setHolding(null);
-    const next = order;
-    setOrder(null);
-    if (!next) return;
-    const before = projects.map((p) => p.id).join("\n");
-    if (next.join("\n") !== before) onReorderProjects(next);
+    const from = ids.indexOf(String(active.id));
+    const to = ids.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    ids.splice(to, 0, ...ids.splice(from, 1));
+    onReorderProjects(ids);
   };
 
   return (
@@ -98,74 +77,107 @@ export function SettingsModal({
         </>
       }
     >
-      <ul className="kd-projlist" data-dragging={holding ? "" : undefined}>
-        {shown.map((project, index) => (
-          <li
-            key={project.id}
-            className="kd-projlist__item"
-            data-held={project.id === holding || undefined}
-          >
-            <span
-              className="kd-projlist__handle"
-              title="掴んで並べ替える"
-              aria-label="掴んで並べ替える"
-              onPointerDown={(e) => onGrab(e, project.id, index)}
-              onPointerMove={onDragMove}
-              onPointerUp={onRelease}
-              onPointerCancel={onRelease}
-            >
-              <Icon name="drag_indicator" size={16} />
-            </span>
-
-            <div className="kd-projlist__text">
-              {editing === project.id ? (
-                <NameField
-                  name={project.name}
-                  onDone={(name) => {
-                    setEditing(null);
-                    if (name && name !== project.name) {
-                      onRenameProject(project.id, name);
-                    }
-                  }}
-                />
-              ) : (
-                <button
-                  className="kd-projlist__name"
-                  title="名前を変える"
-                  onClick={() => setEditing(project.id)}
-                >
-                  {project.name}
-                </button>
-              )}
-              <span className="kd-projlist__path">{project.path}</span>
-            </div>
-
-            <IconButton
-              name="edit"
-              label="名前を変える"
-              size={16}
-              onClick={() => setEditing(project.id)}
-            />
-            <IconButton
-              name="folder_open"
-              label="Finder で表示"
-              size={16}
-              onClick={() => onReveal(project.path)}
-            />
-            <IconButton
-              name="delete"
-              label="登録を解除"
-              size={16}
-              className="kd-iconbtn--danger"
-              onClick={() => onRemoveProject(project.id)}
-            />
-          </li>
-        ))}
-        {projects.length === 0 ? (
-          <li className="kd-projlist__empty">まだ登録がありません</li>
-        ) : null}
-      </ul>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        onDragEnd={onDragEnd}
+      >
+        <SortableContext
+          items={projects.map((p) => p.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <ul className="kd-projlist">
+            {projects.map((project) => (
+              <ProjectRow
+                key={project.id}
+                project={project}
+                editing={editing === project.id}
+                onEdit={() => setEditing(project.id)}
+                onDoneEdit={(name) => {
+                  setEditing(null);
+                  if (name && name !== project.name) {
+                    onRenameProject(project.id, name);
+                  }
+                }}
+                onRemove={() => onRemoveProject(project.id)}
+                onReveal={() => onReveal(project.path)}
+              />
+            ))}
+            {projects.length === 0 ? (
+              <li className="kd-projlist__empty">まだ登録がありません</li>
+            ) : null}
+          </ul>
+        </SortableContext>
+      </DndContext>
     </Modal>
+  );
+}
+
+function ProjectRow({
+  project,
+  editing,
+  onEdit,
+  onDoneEdit,
+  onRemove,
+  onReveal,
+}: {
+  project: Project;
+  editing: boolean;
+  onEdit: () => void;
+  onDoneEdit: (name: string | null) => void;
+  onRemove: () => void;
+  onReveal: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: project.id });
+
+  return (
+    <li
+      ref={setNodeRef}
+      className="kd-projlist__item"
+      data-held={isDragging || undefined}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    >
+      <span
+        className="kd-projlist__handle"
+        title="掴んで並べ替える"
+        {...attributes}
+        {...listeners}
+      >
+        <Icon name="drag_indicator" size={16} />
+      </span>
+
+      <div className="kd-projlist__text">
+        {editing ? (
+          <NameField name={project.name} onDone={onDoneEdit} />
+        ) : (
+          <button
+            className="kd-projlist__name"
+            title="名前を変える"
+            onClick={onEdit}
+          >
+            {project.name}
+          </button>
+        )}
+        <span className="kd-projlist__path">{project.path}</span>
+      </div>
+
+      <IconButton name="edit" label="名前を変える" size={16} onClick={onEdit} />
+      <IconButton
+        name="folder_open"
+        label="Finder で表示"
+        size={16}
+        onClick={onReveal}
+      />
+      <IconButton
+        name="delete"
+        label="登録を解除"
+        size={16}
+        className="kd-iconbtn--danger"
+        onClick={onRemove}
+      />
+    </li>
   );
 }
 

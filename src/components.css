@@ -1443,11 +1443,13 @@ button.kd-row__expand:hover {
 }
 
 .kd-projlist__item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 8px 8px 8px 12px;
+  padding: 8px 8px 8px 6px;
   border-radius: var(--kd-radius-sm);
+  /* transform は並べ替えが動かすので、ここでは触らない。 */
   transition: background var(--kd-dur-instant) var(--kd-ease-out);
 }
 
@@ -1517,24 +1519,15 @@ button.kd-row__expand:hover {
   color: var(--kd-fg);
 }
 
-.kd-projlist[data-dragging] .kd-projlist__handle {
+.kd-projlist__item[data-held] .kd-projlist__handle {
   cursor: grabbing;
 }
 
-/* 掴んでいる行だけ浮かせる。他の行はその場で入れ替わる。 */
+/* 掴んでいる行だけ浮かせる。他の行は下を滑って入れ替わる。 */
 .kd-projlist__item[data-held] {
+  z-index: 1;
   background: var(--kd-elevated);
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.16);
-}
-
-/* 掴んでいるあいだは行の入れ替わりだけを見せる。地色の変化が重なると、
-   どれを持っているのか分からなくなる。 */
-.kd-projlist[data-dragging] .kd-projlist__item:hover {
-  background: transparent;
-}
-
-.kd-projlist[data-dragging] .kd-projlist__item[data-held]:hover {
-  background: var(--kd-elevated);
 }
 
 .kd-projlist__path {
