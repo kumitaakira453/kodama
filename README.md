@@ -109,7 +109,7 @@ kodama review list
 
 ### 指摘 #a3f10000 — 対象は指摘のあと移動しています（現在 37 行目）
 場所: def render_with_file
-比較: SB-2894 の未コミット変更
+比較: feature-upload の未コミット変更
 
 指摘時の行（34）:
 ```python

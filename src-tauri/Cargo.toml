@@ -3,6 +3,7 @@ name = "kodama"
 version = "0.1.0"
 description = "worktree 対応の diff レビューアプリ"
 authors = ["汲田 晶"]
+license = "MIT"
 edition = "2021"
 
 [lib]

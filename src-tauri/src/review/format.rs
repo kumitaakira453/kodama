@@ -163,7 +163,7 @@ mod tests {
             thread: Thread {
                 id: "a3f10000".into(),
                 repo: "/tmp/repo".into(),
-                revision_key: "uncommitted:/tmp/repo/SB-2894".into(),
+                revision_key: "uncommitted:/tmp/repo/feature-upload".into(),
                 file: "src/app.py".into(),
                 side: Side::New,
                 line_start: 34,
@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn 比較対象を読める形にする() {
         let out = threads_markdown(&[view(AnchorState::Unchanged)]);
-        assert!(out.contains("SB-2894 の未コミット変更"), "{out}");
+        assert!(out.contains("feature-upload の未コミット変更"), "{out}");
     }
 
     #[test]
