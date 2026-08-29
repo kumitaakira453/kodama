@@ -61,11 +61,17 @@ describe("stepRange", () => {
     expect(selected(s)).toEqual(["c1", "c2", "c3", "c4"]);
   });
 
-  it("範囲の中を押すと、近い側を落としてその行が外れる", () => {
+  it("範囲の中を押すと、その行とそれより下が外れる", () => {
     let s = stepRange(null, COMMITS, "c0");
     s = stepRange(s, COMMITS, "c4");
     expect(selected(stepRange(s, COMMITS, "c3"))).toEqual(["c0", "c1", "c2"]);
-    expect(selected(stepRange(s, COMMITS, "c1"))).toEqual(["c2", "c3", "c4"]);
+    expect(selected(stepRange(s, COMMITS, "c1"))).toEqual(["c0"]);
+  });
+
+  it("範囲の一番上を押すと何も残らない", () => {
+    let s = stepRange(null, COMMITS, "c1");
+    s = stepRange(s, COMMITS, "c3");
+    expect(stepRange(s, COMMITS, "c1")).toBeNull();
   });
 
   it("1 件だけの状態でその行を押すと外れる", () => {

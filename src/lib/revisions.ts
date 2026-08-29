@@ -163,12 +163,10 @@ export function stepRange(
   const [top, bottom] = span;
   if (i < top) return spanSelection(commits, i, bottom);
   if (i > bottom) return spanSelection(commits, top, i);
-  // 範囲の中を押すのは、その行を外すということ。連続を保つため、
-  // 近い側の端をその手前まで下げる。
-  if (top === bottom) return null;
-  return i - top <= bottom - i
-    ? spanSelection(commits, i + 1, bottom)
-    : spanSelection(commits, top, i - 1);
+  // 範囲の中を押したら、その行とそれより下を外す。近いほうの端を落とす作りに
+  // すると、同じ行を押しても上が消えたり下が消えたりして予測できない。
+  if (i === top) return null;
+  return spanSelection(commits, top, i - 1);
 }
 
 /** 選択中のコミット範囲を一覧の添字で返す。範囲を組んでいなければ null。 */
