@@ -136,18 +136,40 @@
   font-size: 12.5px;
 }
 
+/* 差分の行に置く版。隣の「閲覧済」と寸法・枠・地色をそろえる。 */
+.kd-dd[data-compact] .kd-dd__button {
+  gap: 4px;
+  height: 24px;
+  padding: 0 4px 0 7px;
+  border-color: var(--kd-border-strong);
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: var(--kd-fg-dim);
+  font-family: var(--kd-font-sans);
+}
+
+.kd-dd[data-compact] .kd-dd__button:hover {
+  background: var(--kd-hover);
+}
+
+.kd-dd[data-compact] .kd-dd__label {
+  font-weight: 500;
+  font-size: 11px;
+}
+
+/* body へ出すので、位置も見た目も外から受け継がない。 */
 .kd-dd__menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
+  position: fixed;
   z-index: 30;
-  max-height: min(60vh, 520px);
   overflow: auto;
   padding: 5px;
   border: 1px solid var(--kd-border-strong);
   border-radius: var(--kd-radius-md);
   background: var(--kd-elevated);
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+  color: var(--kd-fg);
+  font-family: var(--kd-font-sans);
+  font-size: 12.5px;
   animation: kd-menu-in var(--kd-dur-instant) var(--kd-ease-out);
   transform-origin: top left;
 }
@@ -237,9 +259,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 高さはポップオーバー側で画面に合わせて決める。ここでも切ると入れ子の
+   スクロールになり、どちらが動くのか分からなくなる。 */
 .kd-revmenu__list {
-  max-height: 300px;
-  overflow: auto;
+  min-height: 0;
 }
 
 .kd-revmenu__note,
@@ -276,8 +299,14 @@
   background: color-mix(in srgb, var(--kd-accent) 12%, transparent);
 }
 
-.kd-revrow[data-empty] {
+.kd-revrow[data-empty],
+.kd-revrow:has(:disabled) {
   opacity: 0.45;
+}
+
+.kd-revrow:has(:disabled),
+.kd-revrow :disabled {
+  cursor: default;
 }
 
 .kd-revrow__box {
@@ -302,10 +331,13 @@
   cursor: pointer;
 }
 
+/* 題名を主役にし、sha と作者はその下に添える。sha を先頭に置くと、どれも
+   同じ長さの英数字が並んで見分けが付かない。 */
 .kd-revrow__body {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
   flex: 1 1 auto;
   min-width: 0;
   padding: 6px 8px 6px 0;
@@ -314,6 +346,25 @@
   color: inherit;
   cursor: pointer;
   text-align: left;
+}
+
+.kd-revrow__line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kd-revrow__body .kd-revrow__text {
+  font-weight: 600;
+}
+
+.kd-revrow__sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kd-muted);
+  font-size: 10.5px;
 }
 
 .kd-revrow__icon {
@@ -907,13 +958,31 @@
   border-bottom: 1px solid var(--kd-border);
 }
 
+/* ハンクの外を読む操作。見出しと同じ行の、行番号の位置に置く。 */
 .kd-row__expand {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--kd-muted);
   opacity: 0.6;
+  font: inherit;
+  transition:
+    background var(--kd-dur-instant) var(--kd-ease-out),
+    opacity var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+button.kd-row__expand {
+  cursor: pointer;
+}
+
+button.kd-row__expand:hover {
+  background: color-mix(in srgb, var(--kd-accent) 18%, transparent);
+  color: var(--kd-accent);
+  opacity: 1;
 }
 
 .kd-row__expand .material-symbols-rounded {
@@ -1706,7 +1775,9 @@
   align-items: center;
   gap: 5px;
   flex: 0 0 auto;
-  padding: 3px 8px;
+  /* 隣の「開く」と同じ高さにする。文字の大きさで決めると食い違う。 */
+  height: 24px;
+  padding: 0 8px;
   border: 1px solid var(--kd-border-strong);
   border-radius: var(--kd-radius-sm);
   color: var(--kd-fg-dim);
@@ -1815,21 +1886,3 @@
   font-size: 12.5px;
 }
 
-/* ハンクの外を読むボタン。ハンクヘッダと同じ見た目にして列を揃える。 */
-.kd-row--expand {
-  grid-template-columns: calc(var(--kd-gutter) * 2 + var(--kd-sign-w)) minmax(0, 1fr);
-  align-items: center;
-  background: var(--kd-diff-hunk);
-  color: var(--kd-muted);
-  border-top: 1px solid var(--kd-border);
-  border-bottom: 1px solid var(--kd-border);
-  cursor: pointer;
-  text-align: left;
-  font: inherit;
-  transition: background var(--kd-dur-instant) var(--kd-ease-out);
-}
-
-.kd-row--expand:hover {
-  background: color-mix(in srgb, var(--kd-accent) 14%, var(--kd-diff-hunk));
-  color: var(--kd-accent);
-}

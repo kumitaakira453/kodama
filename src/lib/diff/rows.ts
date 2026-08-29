@@ -17,7 +17,19 @@ import type {
  */
 export type RowItem =
   | { type: "file-header"; key: string; file: DiffFile; collapsed: boolean }
-  | { type: "hunk"; key: string; file: DiffFile; hunk: DiffHunk; label: string }
+  | {
+      type: "hunk";
+      key: string;
+      file: DiffFile;
+      hunk: DiffHunk;
+      label: string;
+      /**
+       * この見出しの下に隠れている、まだ読めていない旧側の行範囲。
+       * 展開の操作は見出しと同じ行に置く。別の行に分けると、同じ場所を指す
+       * ボタンと見出しが 2 行に増えて何を指しているのか分からなくなる。
+       */
+      gap: { from: number; to: number; gapKey: string } | null;
+    }
   | { type: "line"; key: string; file: DiffFile; line: DiffLine; context: string }
   | {
       type: "split";
@@ -28,15 +40,6 @@ export type RowItem =
       context: string;
     }
   | { type: "notice"; key: string; file: DiffFile; text: string }
-  | {
-      type: "expander";
-      key: string;
-      file: DiffFile;
-      /** 展開の対象になる旧側の行範囲。 */
-      from: number;
-      to: number;
-      gapKey: string;
-    }
   | { type: "thread"; key: string; file: DiffFile; view: ThreadView }
   | { type: "composer"; key: string; file: DiffFile; selection: LineSelection }
   | { type: "file-gap"; key: string };
@@ -48,7 +51,6 @@ export const ROW_HEIGHT = {
   line: 24,
   split: 24,
   notice: 56,
-  expander: 24,
   // 可変。実測で置き換わるまでの見積もり。
   thread: 120,
   composer: 148,
@@ -148,43 +150,13 @@ function appendHunks(
   };
 
   file.hunks.forEach((hunk, hi) => {
-    // ハンクの手前に読めていない行があれば、展開できることを示す。
+    // ハンクの手前に読めていない行があれば、見出しから展開できるようにする。
     const prev = file.hunks[hi - 1];
     const gapFrom = prev ? prev.oldStart + prev.oldLines : 1;
-    const gapTo = hunk.oldStart - 1;
     const gapKey = `${file.path}::g${hi}`;
-    if (gapTo >= gapFrom) {
-      const got = expanded[gapKey];
-      if (got) {
-        got.lines.forEach((text, i) => {
-          const oldNo = got.from + i;
-          rows.push({
-            type: "line",
-            key: `${gapKey}x${i}`,
-            file,
-            context: hunk.header,
-            line: {
-              kind: "context",
-              oldNumber: oldNo,
-              newNumber: oldNo + (hunk.newStart - hunk.oldStart),
-              content: text,
-              noNewline: false,
-              inline: null,
-              tokens: null,
-            },
-          });
-        });
-      } else {
-        rows.push({
-          type: "expander",
-          key: `${gapKey}::btn`,
-          file,
-          from: gapFrom,
-          to: gapTo,
-          gapKey,
-        });
-      }
-    }
+    const got = expanded[gapKey];
+    // 展開はハンクに近い側から進むので、残りは展開済みの手前になる。
+    const restTo = (got ? got.from : hunk.oldStart) - 1;
 
     rows.push({
       type: "hunk",
@@ -192,7 +164,29 @@ function appendHunks(
       file,
       hunk,
       label: `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@`,
+      gap: restTo >= gapFrom ? { from: gapFrom, to: restTo, gapKey } : null,
     });
+
+    if (got) {
+      got.lines.forEach((text, i) => {
+        const oldNo = got.from + i;
+        rows.push({
+          type: "line",
+          key: `${gapKey}x${i}`,
+          file,
+          context: hunk.header,
+          line: {
+            kind: "context",
+            oldNumber: oldNo,
+            newNumber: oldNo + (hunk.newStart - hunk.oldStart),
+            content: text,
+            noNewline: false,
+            inline: null,
+            tokens: null,
+          },
+        });
+      });
+    }
 
     if (mode === "unified") {
       hunk.lines.forEach((line, li) => {

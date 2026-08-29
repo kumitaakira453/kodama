@@ -1,9 +1,10 @@
 import { useAtom, useAtomValue } from "jotai";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 import {
   PSEUDO_LABELS,
   describeSelection,
+  explainSelection,
   isInSelection,
   resolveRange,
   type PseudoId,
@@ -18,11 +19,17 @@ import {
 import { Dropdown } from "../ui/Dropdown";
 import { Icon } from "../ui/Icon";
 
-const PSEUDO_ORDER: { id: PseudoId; icon: string }[] = [
+/**
+ * 作業ツリーの状態。どれか 1 つを選ぶ。
+ *
+ * 「ブランチ全体」はここに並べない。あれは分岐点から現在までのコミットを選ぶ
+ * ことそのものなので、コミットの側に置いて、該当するコミットにチェックが
+ * 付くようにする。
+ */
+const WORKTREE_ORDER: { id: PseudoId; icon: string }[] = [
   { id: "uncommitted", icon: "edit_note" },
   { id: "staged", icon: "playlist_add_check" },
   { id: "unstaged", icon: "pending_actions" },
-  { id: "branch", icon: "account_tree" },
 ];
 
 /** 比較対象を選ぶ。専用ペインは持たせず、上部バーのドロップダウンに畳む。 */
@@ -35,6 +42,13 @@ export function RevisionMenu() {
   const commits = revisions?.commits ?? [];
   const defaultBase = revisions?.defaultBase ?? null;
   const range = resolveRange(selection, commits);
+  const branchShas = useMemo(
+    () => new Set(revisions?.branchShas ?? []),
+    [revisions],
+  );
+  const branchSelected =
+    selection.kind === "pseudo" && selection.id === "branch";
+  const selectedCount = branchSelected ? branchShas.size : (range?.count ?? 0);
 
   /**
    * チェックは起点を保ったまま、押した行まで選択を伸ばす / 縮める。
@@ -58,12 +72,16 @@ export function RevisionMenu() {
     <Dropdown
       icon="difference"
       label={describeSelection(selection, commits, defaultBase)}
-      title="比較対象を選ぶ"
+      title={explainSelection(selection, commits, defaultBase)}
       width={420}
     >
       {(close) => (
         <div className="kd-revmenu">
-          {PSEUDO_ORDER.map(({ id, icon }) => {
+          <div className="kd-revmenu__sep">
+            <span>作業ツリー</span>
+          </div>
+
+          {WORKTREE_ORDER.map(({ id, icon }) => {
             const detail = pseudoDetail(id, status, defaultBase);
             const selected = selection.kind === "pseudo" && selection.id === id;
             return (
@@ -95,9 +113,39 @@ export function RevisionMenu() {
 
           <div className="kd-revmenu__sep">
             <span>コミット</span>
-            {range && range.count > 1 ? (
-              <span className="kd-revmenu__badge">{range.count} 件</span>
+            {selectedCount > 1 ? (
+              <span className="kd-revmenu__badge">{selectedCount} 件</span>
             ) : null}
+          </div>
+
+          <div className="kd-revrow" data-selected={branchSelected || undefined}>
+            <label
+              className="kd-revrow__box"
+              title="分岐点から現在までをまとめて選ぶ"
+            >
+              <input
+                type="checkbox"
+                checked={branchSelected}
+                disabled={!defaultBase}
+                onChange={() => setSelection({ kind: "pseudo", id: "branch" })}
+                aria-label="すべてのコミットを選択"
+              />
+            </label>
+            <button
+              className="kd-revrow__body"
+              disabled={!defaultBase}
+              onClick={() => setSelection({ kind: "pseudo", id: "branch" })}
+              title={pseudoDetail("branch", status, defaultBase).title}
+            >
+              <span className="kd-revrow__line">
+                <span className="kd-revrow__text">すべてのコミット</span>
+              </span>
+              <span className="kd-revrow__sub">
+                {defaultBase
+                  ? `${defaultBase} との分岐点から ${branchShas.size} コミット`
+                  : "比較元のブランチが見つかりません"}
+              </span>
+            </button>
           </div>
 
           <div className="kd-revmenu__list">
@@ -105,7 +153,7 @@ export function RevisionMenu() {
               <CommitRow
                 key={c.sha}
                 commit={c}
-                selected={isInSelection(c.sha, selection, commits)}
+                selected={isInSelection(c.sha, selection, commits, branchShas)}
                 onToggle={() => extendTo(c.sha)}
                 onSelectOnly={() =>
                   setSelection({ kind: "commits", anchor: c.sha, focus: c.sha })
@@ -118,7 +166,8 @@ export function RevisionMenu() {
           </div>
 
           <p className="kd-revmenu__hint">
-            チェックで範囲を伸ばし、行のクリックで 1 件だけ選びます。
+            チェックを付けたところまで範囲が伸びます。間を飛ばして押すと、
+            あいだのコミットもまとめて入ります。行のクリックで 1 件だけ選べます。
           </p>
         </div>
       )}
@@ -152,9 +201,13 @@ function CommitRow({
         onClick={onSelectOnly}
         title={`${commit.sha}\n${commit.author}\n${commit.subject}`}
       >
-        <span className="kd-revrow__sha">{commit.shortSha}</span>
-        <span className="kd-revrow__text">{commit.subject}</span>
-        <span className="kd-revrow__meta">{commit.relative}</span>
+        <span className="kd-revrow__line">
+          <span className="kd-revrow__text">{commit.subject}</span>
+          <span className="kd-revrow__sha">{commit.shortSha}</span>
+        </span>
+        <span className="kd-revrow__sub">
+          {commit.author} · {commit.relative}
+        </span>
       </button>
     </div>
   );

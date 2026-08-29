@@ -17,7 +17,7 @@ export const PSEUDO_LABELS: Record<PseudoId, string> = {
   uncommitted: "未コミットの変更",
   staged: "ステージ済み",
   unstaged: "未ステージ",
-  branch: "ブランチ全体",
+  branch: "すべてのコミット",
 };
 
 /**
@@ -85,13 +85,22 @@ export function resolveRange(
   return { newest, oldest, count: bottom - top + 1 };
 }
 
-/** ある sha が選択範囲に入っているか。行のハイライト判定に使う。 */
+/**
+ * ある sha が選択に入っているか。コミット行のチェック状態に使う。
+ *
+ * 「ブランチ全体」は分岐点から現在までのコミットを選ぶことなので、該当する
+ * コミットにもチェックを付ける。一覧には分岐点より前のコミットも並ぶため、
+ * どこまでが該当するかは git が返した sha の集合で判定する。
+ */
 export function isInSelection(
   sha: string,
   selection: CommitSelection,
   commits: CommitInfo[],
+  branchShas?: ReadonlySet<string>,
 ): boolean {
-  if (selection.kind !== "commits") return false;
+  if (selection.kind === "pseudo") {
+    return selection.id === "branch" && (branchShas?.has(sha) ?? false);
+  }
   const a = commits.findIndex((c) => c.sha === selection.anchor);
   const b = commits.findIndex((c) => c.sha === selection.focus);
   const i = commits.findIndex((c) => c.sha === sha);
@@ -99,7 +108,12 @@ export function isInSelection(
   return i >= Math.min(a, b) && i <= Math.max(a, b);
 }
 
-/** 選択内容を 1 行で説明する。ツールバーと空状態の文言に使う。 */
+/**
+ * 選択内容を短く言い表す。上部バーのボタンに出す。
+ *
+ * sha は並べても見分けが付かないので、1 件ならコミットの題名を出す。
+ * 複数なら題名を並べても読めないので件数にする。sha は title に回す。
+ */
 export function describeSelection(
   selection: CommitSelection,
   commits: CommitInfo[],
@@ -107,8 +121,26 @@ export function describeSelection(
 ): string {
   if (selection.kind === "pseudo") {
     if (selection.id === "branch") {
+      return defaultBase ? "すべてのコミット" : "比較元のブランチが見つかりません";
+    }
+    return PSEUDO_LABELS[selection.id];
+  }
+  const range = resolveRange(selection, commits);
+  if (!range) return "コミットを選んでください";
+  if (range.count === 1) return range.newest.subject;
+  return `${range.count} コミット`;
+}
+
+/** 選択内容の詳しい説明。ボタンの title に出す。 */
+export function explainSelection(
+  selection: CommitSelection,
+  commits: CommitInfo[],
+  defaultBase: string | null,
+): string {
+  if (selection.kind === "pseudo") {
+    if (selection.id === "branch") {
       return defaultBase
-        ? `${defaultBase} から現在まで`
+        ? `${defaultBase} との分岐点から現在まで`
         : "比較元のブランチが見つかりません";
     }
     return PSEUDO_LABELS[selection.id];
@@ -118,5 +150,5 @@ export function describeSelection(
   if (range.count === 1) {
     return `${range.newest.shortSha} ${range.newest.subject}`;
   }
-  return `${range.oldest.shortSha} … ${range.newest.shortSha}（${range.count} コミット）`;
+  return `${range.oldest.shortSha} … ${range.newest.shortSha}`;
 }

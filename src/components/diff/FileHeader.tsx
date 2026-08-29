@@ -76,7 +76,13 @@ export function FileHeader({
         閲覧済
       </label>
 
-      <Dropdown icon="open_in_new" label="開く" width={220} title="このファイルを開く">
+      <Dropdown
+        icon="open_in_new"
+        label="開く"
+        width={180}
+        title="このファイルを開く"
+        compact
+      >
         {(close) =>
           apps.map((app) => (
             <button

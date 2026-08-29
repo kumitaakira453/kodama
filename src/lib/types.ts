@@ -62,6 +62,8 @@ export interface RevisionList {
   branches: string[];
   /** merge-base 比較に使える既定の base ref。見つからなければ null。 */
   defaultBase: string | null;
+  /** `defaultBase` から現在までに含まれるコミットの sha。 */
+  branchShas: string[];
 }
 
 /** 何と何の差分を見るか。 */

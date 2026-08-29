@@ -7,6 +7,7 @@
 //! 押しても無反応になりうる項目はそもそもメニューに出さない。実際に起動できる
 //! ものだけを列挙する。
 
+use std::path::PathBuf;
 use std::process::Command;
 
 use serde::Serialize;
@@ -30,6 +31,8 @@ struct Editor {
     command: &'static str,
     /// `%file` と `%line` を置換して渡す引数。
     args: &'static [&'static str],
+    /// `/Applications` に置かれるアプリケーションバンドルの名前。
+    bundle: &'static str,
 }
 
 const EDITORS: &[Editor] = &[
@@ -38,77 +41,64 @@ const EDITORS: &[Editor] = &[
         label: "VS Code",
         command: "code",
         args: &["-g", "%file:%line"],
-    },
-    Editor {
-        id: "cursor",
-        label: "Cursor",
-        command: "cursor",
-        args: &["-g", "%file:%line"],
+        bundle: "Visual Studio Code",
     },
     Editor {
         id: "zed",
         label: "Zed",
         command: "zed",
         args: &["%file:%line"],
-    },
-    Editor {
-        id: "sublime",
-        label: "Sublime Text",
-        command: "subl",
-        args: &["%file:%line"],
-    },
-    Editor {
-        id: "idea",
-        label: "IntelliJ IDEA",
-        command: "idea",
-        args: &["--line", "%line", "%file"],
+        bundle: "Zed",
     },
 ];
+
+/// 起動の手段。どちらで開けるかで行番号を渡せるかが変わる。
+enum Launch {
+    /// PATH 上の実行ファイル。行番号を渡せる。
+    Cli(String),
+    /// アプリケーションバンドル。`open` は引数をアプリへ届けるだけなので、
+    /// 位置の指定はできない。
+    Bundle,
+}
 
 /// いま起動できるものだけを返す。
 pub fn installed() -> Vec<AppTarget> {
     let mut out: Vec<AppTarget> = EDITORS
         .iter()
-        .filter(|e| which(e.command).is_some())
-        .map(|e| AppTarget {
-            id: e.id.to_string(),
-            label: e.label.to_string(),
-            supports_line: true,
+        .filter_map(|editor| {
+            let launch = launcher(editor)?;
+            Some(AppTarget {
+                id: editor.id.to_string(),
+                label: editor.label.to_string(),
+                supports_line: matches!(launch, Launch::Cli(_)),
+            })
         })
         .collect();
 
-    // Finder とターミナルは macOS に必ずある。
+    // Finder は macOS に必ずある。
     out.push(AppTarget {
         id: "finder".to_string(),
         label: "Finder で表示".to_string(),
-        supports_line: false,
-    });
-    out.push(AppTarget {
-        id: "terminal".to_string(),
-        label: "ターミナルで開く".to_string(),
         supports_line: false,
     });
     out
 }
 
 pub fn open_in(app_id: &str, path: &str, line: Option<u32>) -> KdResult<()> {
-    match app_id {
-        "finder" => run("/usr/bin/open", &["-R".to_string(), path.to_string()]),
-        "terminal" => run(
+    if app_id == "finder" {
+        return run(
             "/usr/bin/open",
-            &["-a".to_string(), "Terminal".to_string(), path.to_string()],
-        ),
-        _ => {
-            let editor = EDITORS
-                .iter()
-                .find(|e| e.id == app_id)
-                .ok_or_else(|| KdError::new(format!("{app_id} は扱えません。")))?;
-            let bin = which(editor.command).ok_or_else(|| {
-                KdError::new(format!(
-                    "{} が見つかりません。コマンド `{}` を PATH に通してください。",
-                    editor.label, editor.command
-                ))
-            })?;
+            &["-R".to_string(), "--".to_string(), path.to_string()],
+        );
+    }
+
+    let editor = EDITORS
+        .iter()
+        .find(|e| e.id == app_id)
+        .ok_or_else(|| KdError::new(format!("{app_id} は扱えません。")))?;
+
+    match launcher(editor) {
+        Some(Launch::Cli(bin)) => {
             let args: Vec<String> = editor
                 .args
                 .iter()
@@ -119,7 +109,41 @@ pub fn open_in(app_id: &str, path: &str, line: Option<u32>) -> KdResult<()> {
                 .collect();
             run(&bin, &args)
         }
+        Some(Launch::Bundle) => run(
+            "/usr/bin/open",
+            &[
+                "-a".to_string(),
+                editor.bundle.to_string(),
+                "--".to_string(),
+                path.to_string(),
+            ],
+        ),
+        None => Err(KdError::new(format!(
+            "{} が見つかりません。インストールされているか確認してください。",
+            editor.label
+        ))),
     }
+}
+
+/// CLI があれば行番号まで渡せるので優先する。無ければバンドルを探す。
+///
+/// バンドルも見るのは、GUI から起動したアプリの PATH がログインシェルより
+/// 狭く、`code` や `zed` のシムが入っていても見えない場合があるため。
+fn launcher(editor: &Editor) -> Option<Launch> {
+    if let Some(bin) = which(editor.command) {
+        return Some(Launch::Cli(bin));
+    }
+    bundle_exists(editor.bundle).then_some(Launch::Bundle)
+}
+
+fn bundle_exists(name: &str) -> bool {
+    let mut roots = vec![PathBuf::from("/Applications")];
+    if let Some(home) = std::env::var_os("HOME") {
+        roots.push(PathBuf::from(home).join("Applications"));
+    }
+    roots
+        .iter()
+        .any(|root| root.join(format!("{name}.app")).exists())
 }
 
 fn run(program: &str, args: &[String]) -> KdResult<()> {

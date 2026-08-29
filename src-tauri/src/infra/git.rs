@@ -243,6 +243,22 @@ impl Git {
         None
     }
 
+    /// `base` との共通祖先から現在までに含まれるコミットの sha。
+    ///
+    /// 「ブランチ全体」がコミット一覧のどのコミットを指すのかを示すのに使う。
+    /// 一覧より深いところは要らないので、同じ上限で切る。
+    pub fn branch_commits(&self, worktree: &str, base: &str, limit: u32) -> Vec<String> {
+        let count = format!("--max-count={limit}");
+        let range = format!("{base}..HEAD");
+        self.run(worktree, &["rev-list", &count, &range], false)
+            .unwrap_or_default()
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(str::to_string)
+            .collect()
+    }
+
     pub fn merge_base(&self, worktree: &str, base: &str, target: &str) -> Option<String> {
         let out = self
             .run(worktree, &["merge-base", base, target], false)

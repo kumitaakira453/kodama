@@ -1,6 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useHighlight } from "../../hooks/useHighlight";
 import { useToast } from "../../hooks/useToast";
@@ -110,9 +110,13 @@ export function DiffCanvas({
     // 長い行は折り返すので高さが可変になる。見積もりは型ごとの値を出発点にし、
     // 実際の高さは描画後に測って置き換える。
     measureElement: (el) => el.getBoundingClientRect().height,
-    overscan: 20,
+    // 先読みは画面外 8 行まで。増やすほど 1 回のスクロールで新しく作る行が
+    // 増え、実測も走る。
+    overscan: 8,
     getItemKey: (i) => rows[i].key,
   });
+
+  const clearSelection = useCallback(() => setSelection(null), [setSelection]);
 
   const toggleFile = useCallback(
     (path: string) =>
@@ -162,7 +166,17 @@ export function DiffCanvas({
       void api
         .readLines(worktree, diff.resolved.spec, path, "old", start, to)
         .then((lines) =>
-          setExpanded((prev) => ({ ...prev, [gapKey]: { from: start, lines } })),
+          // 2 回目以降は取れた分を手前に足す。置き換えると前回の分が消える。
+          setExpanded((prev) => {
+            const got = prev[gapKey];
+            return {
+              ...prev,
+              [gapKey]: {
+                from: start,
+                lines: got ? [...lines, ...got.lines] : lines,
+              },
+            };
+          }),
         )
         .catch(showError);
     },
@@ -228,14 +242,21 @@ export function DiffCanvas({
   const items = virtualizer.getVirtualItems();
 
   // 画面に入っているファイルだけ色を取りに行く。
-  const visiblePaths = useMemo(() => {
+  //
+  // 中身が同じでも配列を作り直すと、スクロールのたびに取得の判定が走る。
+  // 一度文字列に畳んで、顔ぶれが変わったときだけ新しい配列にする。
+  const visibleKey = useMemo(() => {
     const seen = new Set<string>();
     for (const item of items) {
       const row = rows[item.index];
       if (row && row.type !== "file-gap") seen.add(row.file.path);
     }
-    return [...seen];
+    return [...seen].join("\n");
   }, [items, rows]);
+  const visiblePaths = useMemo(
+    () => (visibleKey ? visibleKey.split("\n") : []),
+    [visibleKey],
+  );
   useHighlight(visiblePaths);
 
   const scrollOffset = virtualizer.scrollOffset ?? 0;
@@ -342,7 +363,7 @@ export function DiffCanvas({
                 onGutter={onGutter}
                 onExpand={expandGap}
                 onSubmit={submitThread}
-                onCancel={() => setSelection(null)}
+                onCancel={clearSelection}
                 onReply={onReply}
                 onResolve={onResolve}
                 onDrop={onDropThread}
@@ -373,7 +394,11 @@ interface RowProps {
   onDrop: (id: string) => void;
 }
 
-function Row({
+/**
+ * 行 1 つ。スクロールのたびに親が描き直されるので、受け取る値が変わらない
+ * 行は再描画しない。行の数だけ差が出る。
+ */
+const Row = memo(function Row({
   row,
   wordDiff,
   selection,
@@ -410,24 +435,6 @@ function Row({
     case "notice":
       return <div className="kd-notice">{row.text}</div>;
 
-    case "expander":
-      return (
-        <button
-          className="kd-row kd-row--expand"
-          onClick={() =>
-            onExpand(row.gapKey, row.file.path, row.from, row.to)
-          }
-          title={`${row.from}-${row.to} 行目を表示する`}
-        >
-          <span className="kd-row__expand" aria-hidden>
-            <span className="material-symbols-rounded">unfold_more</span>
-          </span>
-          <span className="kd-hunk__text">
-            {row.to - row.from + 1} 行を表示
-          </span>
-        </button>
-      );
-
     case "thread":
       return (
         <div className="kd-inset">
@@ -451,21 +458,34 @@ function Row({
         </div>
       );
 
-    case "hunk":
+    case "hunk": {
+      const gap = row.gap;
       return (
-        <div
-          className="kd-row kd-row--hunk"
-          title={`${row.label} ${row.hunk.header}`}
-        >
-          <span className="kd-row__expand" aria-hidden>
-            <span className="material-symbols-rounded">unfold_more</span>
-          </span>
-          <span className="kd-hunk__text">
+        <div className="kd-row kd-row--hunk">
+          {gap ? (
+            <button
+              className="kd-row__expand"
+              onClick={() =>
+                onExpand(gap.gapKey, row.file.path, gap.from, gap.to)
+              }
+              title={`手前の ${gap.to - gap.from + 1} 行を表示する`}
+              aria-label={`${gap.from}-${gap.to} 行目を表示する`}
+            >
+              <span className="material-symbols-rounded">unfold_more</span>
+            </button>
+          ) : (
+            <span className="kd-row__expand" aria-hidden />
+          )}
+          <span
+            className="kd-hunk__text"
+            title={`${row.label} ${row.hunk.header}`}
+          >
             {row.label}
             {row.hunk.header ? ` ${row.hunk.header}` : ""}
           </span>
         </div>
       );
+    }
 
     case "line": {
       const line = row.line;
@@ -540,7 +560,7 @@ function Row({
         </div>
       );
   }
-}
+});
 
 /** 行番号のセル。押すと指摘の対象になる。 */
 function Gutter({
