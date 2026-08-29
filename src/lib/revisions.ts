@@ -68,6 +68,17 @@ export function buildSpec(
 
   const range = resolveRange(selection, commits);
   if (!range) return null;
+
+  // 一覧すべてを選ぶのは「すべてのコミット」と同じこと。同じ結果になるよう
+  // 同じ指定に寄せる。
+  //
+  // 端のコミットの親を基準にすると、分岐したあとに base 側を取り込んだ枝で
+  // 食い違う。取り込んだぶんの変更まで差分に入ってしまう。分岐点を基準に
+  // すれば、そのブランチで積んだ変更だけが残る。
+  if (defaultBase && commits.length > 0 && range.count === commits.length) {
+    return { kind: "range", base: defaultBase, target: "HEAD", mergeBase: true };
+  }
+
   return {
     kind: "commitRange",
     oldest: range.oldest.sha,

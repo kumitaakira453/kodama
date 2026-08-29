@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { covers, resolveRange, stepRange, type CommitSelection } from "./revisions";
+import {
+  buildSpec,
+  covers,
+  resolveRange,
+  stepRange,
+  type CommitSelection,
+} from "./revisions";
 import type { CommitInfo } from "./types";
 
 /** 一覧は新しい順。添字 0 が最新。 */
@@ -82,6 +88,44 @@ describe("stepRange", () => {
   it("一覧に無い sha は選択を変えない", () => {
     const one = stepRange(null, COMMITS, "c2");
     expect(stepRange(one, COMMITS, "zz")).toBe(one);
+  });
+});
+
+describe("buildSpec", () => {
+  const BASE = "origin/develop";
+
+  it("一覧すべてを選ぶのは「すべてのコミット」と同じ指定になる", () => {
+    const all: CommitSelection = { kind: "pseudo", id: "branch" };
+    const everySelected: CommitSelection = {
+      kind: "commits",
+      anchor: "c0",
+      focus: "c4",
+    };
+    expect(buildSpec(everySelected, COMMITS, BASE)).toEqual(
+      buildSpec(all, COMMITS, BASE),
+    );
+  });
+
+  it("一部だけ選んだときは端のコミットの親から見る", () => {
+    const some: CommitSelection = { kind: "commits", anchor: "c1", focus: "c3" };
+    expect(buildSpec(some, COMMITS, BASE)).toEqual({
+      kind: "commitRange",
+      oldest: "c3",
+      newest: "c1",
+    });
+  });
+
+  it("分岐元が分からなければ、すべて選んでも端の親から見る", () => {
+    const everySelected: CommitSelection = {
+      kind: "commits",
+      anchor: "c0",
+      focus: "c4",
+    };
+    expect(buildSpec(everySelected, COMMITS, null)).toEqual({
+      kind: "commitRange",
+      oldest: "c4",
+      newest: "c0",
+    });
   });
 });
 
