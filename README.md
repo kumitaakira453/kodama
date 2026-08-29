@@ -53,6 +53,25 @@ ln -sf /Applications/kodama.app/Contents/MacOS/kodama /usr/local/bin/kodama
 「システム設定 → プライバシーとセキュリティ」で許可するか、
 `xattr -dr com.apple.quarantine /Applications/kodama.app` を実行する。
 
+### 自動更新を有効にする
+
+アプリは起動時とメニューの「更新を確認」で新しい版を探すが、成果物に署名が
+無いと受け取れない。鍵を用意して初めて動く。
+
+```bash
+npx tauri signer generate -w ~/.tauri/kodama.key
+gh secret set TAURI_SIGNING_PRIVATE_KEY < ~/.tauri/kodama.key
+gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+```
+
+そのうえで 3 か所を戻す。
+
+| 場所 | 設定 |
+|------|------|
+| `src-tauri/tauri.conf.json` | `plugins.updater.pubkey` に公開鍵 |
+| `src-tauri/tauri.conf.json` | `bundle.createUpdaterArtifacts` を `true` |
+| `.github/workflows/release.yml` | `includeUpdaterJson` を `true` |
+
 ### AI 側のスキル
 
 指摘への対応手順をまとめたスキルを同梱している。入れておくと「レビュー見て」の
