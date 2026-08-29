@@ -83,6 +83,42 @@
   flex: 1 1 auto;
 }
 
+/* 二者択一のセグメント。選ばれている側だけが浮き上がる。 */
+.kd-seg {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--kd-border);
+  border-radius: var(--kd-radius-md);
+  background: var(--kd-bg);
+}
+
+.kd-seg__item {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 24px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--kd-muted);
+  cursor: pointer;
+  transition:
+    background var(--kd-dur-instant) var(--kd-ease-out),
+    color var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-seg__item:hover {
+  color: var(--kd-fg);
+}
+
+.kd-seg__item[aria-pressed="true"] {
+  background: var(--kd-elevated);
+  color: var(--kd-accent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
 /* パンくずの区切り。押せないことが分かるよう、うんと淡くする。 */
 .kd-topbar__sep {
   flex: 0 0 auto;
@@ -1975,9 +2011,24 @@ button.kd-row__expand:hover {
   color: var(--kd-accent);
 }
 
-.kd-num--pick[data-picked] {
-  background: var(--kd-accent);
-  color: #fff;
+/* 選んだ行は行全体を塗る。左右に並べたときに片側だけ塗ると、対になっている
+   行がどれか分からなくなる。縦に並べたときと見え方もそろう。 */
+.kd-row[data-picked] {
+  background: color-mix(in srgb, var(--kd-accent-2) 20%, transparent);
+}
+
+/* 選択中はセルごとの差分色を出さない。いま何を選んでいるかを最優先で見せる。 */
+.kd-row[data-picked] .kd-num,
+.kd-row[data-picked] .kd-sign,
+.kd-row[data-picked] .kd-code {
+  background: transparent;
+}
+
+/* 指摘の対象になる側の行番号だけ濃くし、内側に印を引く。 */
+.kd-row[data-picked] .kd-num[data-picked] {
+  background: color-mix(in srgb, var(--kd-accent-2) 40%, transparent);
+  box-shadow: inset 2px 0 0 var(--kd-accent-2);
+  color: var(--kd-fg);
 }
 
 /* ==========================================================================

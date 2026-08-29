@@ -125,12 +125,26 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
 
       <ProgressRing progress={progress} />
 
-      <IconButton
-        name="vertical_split"
-        label="左右に並べて見る (u)"
-        active={mode === "split"}
-        onClick={() => setMode(mode === "split" ? "unified" : "split")}
-      />
+      {/* どちらか一方を選ぶので、両方を並べて出す。片方だけを押しボタンに
+          すると、いま選ばれていない側が何なのか分からない。 */}
+      <div className="kd-seg" role="group" aria-label="差分の並べ方">
+        <button
+          className="kd-seg__item"
+          aria-pressed={mode === "unified"}
+          title="縦に並べる (u)"
+          onClick={() => setMode("unified")}
+        >
+          <Icon name="view_headline" size={16} />
+        </button>
+        <button
+          className="kd-seg__item"
+          aria-pressed={mode === "split"}
+          title="左右に並べる (u)"
+          onClick={() => setMode("split")}
+        >
+          <Icon name="vertical_split" size={16} />
+        </button>
+      </div>
 
       <IconButton name="refresh" label="再読込 (⌘R)" onClick={onReload} />
       <IconButton

@@ -58,14 +58,54 @@ interface DiffCanvasProps {
 /** 一度に展開する行数の上限。隙間が広いときは直前の分だけ出す。 */
 const MAX_EXPAND = 200;
 
-/** 行番号をクリックしたときに親へ渡す情報。 */
+/** 行番号を押したときに親へ渡す情報。 */
 interface GutterHit {
   file: DiffFile;
   side: Side;
   line: number;
   content: string;
   context: string;
+  /** `start` は押した瞬間、`drag` は押したまま通過したとき。 */
+  phase: "start" | "drag";
   extend: boolean;
+}
+
+/** その行がいま選んでいる範囲に入っているか。 */
+function inSelection(
+  selection: LineSelection | null,
+  file: string,
+  side: Side,
+  no: number | null,
+): boolean {
+  return (
+    no !== null &&
+    selection?.file === file &&
+    selection.side === side &&
+    no >= selection.start &&
+    no <= selection.end
+  );
+}
+
+/**
+ * 選択範囲の逐語。
+ *
+ * 行番号だけを控えると、指摘に応えて書き換えられた瞬間に対象を見失う。
+ * 複数行を選んだときは全行を控える。
+ */
+function quoteOf(files: DiffFile[], selection: LineSelection): string {
+  const file = files.find((f) => f.path === selection.file);
+  if (!file) return selection.quote;
+  const out: string[] = [];
+  for (const hunk of file.hunks) {
+    for (const line of hunk.lines) {
+      const no =
+        selection.side === "old" ? line.oldNumber : line.newNumber;
+      if (no !== null && no >= selection.start && no <= selection.end) {
+        out.push(line.content);
+      }
+    }
+  }
+  return out.length > 0 ? out.join("\n") : selection.quote;
 }
 
 /**
@@ -136,9 +176,46 @@ export function DiffCanvas({
     [setCollapsed],
   );
 
-  /** 行番号のクリック。Shift を押していれば起点を保って範囲を伸ばす。 */
+  /** 押した行。ここを軸にして、なぞった先まで範囲を伸ばす。 */
+  const anchor = useRef<number | null>(null);
+  const dragging = useRef(false);
+
+  useEffect(() => {
+    const stop = () => {
+      dragging.current = false;
+    };
+    window.addEventListener("mouseup", stop);
+    return () => window.removeEventListener("mouseup", stop);
+  }, []);
+
+  /**
+   * 行番号の操作。押した時点で 1 行を選び、そのままなぞると範囲が伸びる。
+   * Shift を押しての単発クリックでも伸ばせる。
+   */
   const onGutter = useCallback(
     (hit: GutterHit) => {
+      if (hit.phase === "drag") {
+        if (!dragging.current || anchor.current === null) return;
+        setSelection((prev) => {
+          // なぞっている途中で別の側へ入っても、範囲は動かさない。
+          if (
+            !prev ||
+            prev.file !== hit.file.path ||
+            prev.side !== hit.side
+          ) {
+            return prev;
+          }
+          const from = anchor.current as number;
+          return {
+            ...prev,
+            start: Math.min(from, hit.line),
+            end: Math.max(from, hit.line),
+          };
+        });
+        return;
+      }
+
+      dragging.current = true;
       setSelection((prev) => {
         if (
           hit.extend &&
@@ -146,12 +223,15 @@ export function DiffCanvas({
           prev.file === hit.file.path &&
           prev.side === hit.side
         ) {
+          // 反対側の端を軸にすると、そのまま引き返して縮められる。
+          anchor.current = hit.line <= prev.start ? prev.end : prev.start;
           return {
             ...prev,
             start: Math.min(prev.start, hit.line),
             end: Math.max(prev.end, hit.line),
           };
         }
+        anchor.current = hit.line;
         return {
           file: hit.file.path,
           side: hit.side,
@@ -200,14 +280,14 @@ export function DiffCanvas({
         side: selection.side,
         lineStart: selection.start,
         lineEnd: selection.end,
-        quote: selection.quote,
+        quote: quoteOf(files, selection),
         context: selection.context,
         body,
         author: "you",
       });
       setSelection(null);
     },
-    [selection, worktree, diff, onAddThread, setSelection],
+    [selection, worktree, diff, files, onAddThread, setSelection],
   );
 
   // ツリーからの「ここまで飛べ」を受ける。
@@ -504,19 +584,20 @@ const Row = memo(function Row({
 
     case "line": {
       const line = row.line;
-      const picked = (side: Side, no: number | null) =>
-        no !== null &&
-        selection?.file === row.file.path &&
-        selection.side === side &&
-        no >= selection.start &&
-        no <= selection.end;
+      const path = row.file.path;
+      const pickedOld = inSelection(selection, path, "old", line.oldNumber);
+      const pickedNew = inSelection(selection, path, "new", line.newNumber);
 
       return (
-        <div className="kd-row" data-kind={line.kind}>
+        <div
+          className="kd-row"
+          data-kind={line.kind}
+          data-picked={pickedOld || pickedNew || undefined}
+        >
           <Gutter
             no={line.oldNumber}
-            picked={picked("old", line.oldNumber)}
-            onPick={(extend) => {
+            picked={pickedOld}
+            onPick={(phase, extend) => {
               if (line.oldNumber === null) return;
               onGutter({
                 file: row.file,
@@ -524,14 +605,15 @@ const Row = memo(function Row({
                 line: line.oldNumber,
                 content: line.content,
                 context: row.context,
+                phase,
                 extend,
               });
             }}
           />
           <Gutter
             no={line.newNumber}
-            picked={picked("new", line.newNumber)}
-            onPick={(extend) => {
+            picked={pickedNew}
+            onPick={(phase, extend) => {
               if (line.newNumber === null) return;
               onGutter({
                 file: row.file,
@@ -539,6 +621,7 @@ const Row = memo(function Row({
                 line: line.newNumber,
                 content: line.content,
                 context: row.context,
+                phase,
                 extend,
               });
             }}
@@ -551,9 +634,16 @@ const Row = memo(function Row({
       );
     }
 
-    case "split":
+    case "split": {
+      const path = row.file.path;
+      const picked =
+        inSelection(selection, path, "old", row.left?.oldNumber ?? null) ||
+        inSelection(selection, path, "new", row.right?.newNumber ?? null);
       return (
-        <div className="kd-row kd-row--split">
+        <div
+          className="kd-row kd-row--split"
+          data-picked={picked || undefined}
+        >
           <SideCell
             line={row.left}
             side="old"
@@ -574,6 +664,7 @@ const Row = memo(function Row({
           />
         </div>
       );
+    }
   }
 });
 
@@ -590,7 +681,7 @@ function Gutter({
   /** 左右に並べたときは行ではなくセルごとに色を付けるので、種別をここに持つ。 */
   kind?: DiffLineKind;
   side?: Side;
-  onPick: (extend: boolean) => void;
+  onPick: (phase: "start" | "drag", extend: boolean) => void;
 }) {
   if (no === null) {
     return <span className="kd-num" data-kind={kind} data-side={side} />;
@@ -601,8 +692,19 @@ function Gutter({
       data-picked={picked || undefined}
       data-kind={kind}
       data-side={side}
-      onClick={(e) => onPick(e.shiftKey)}
-      title="この行に指摘する（Shift+クリックで範囲）"
+      // クリックではなく押した瞬間に始める。そのままなぞって範囲を選べる。
+      // 既定の動作を止めるのは、なぞるあいだに本文が選択されるのを防ぐため。
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onPick("start", e.shiftKey);
+      }}
+      onMouseEnter={() => onPick("drag", false)}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        onPick("start", e.shiftKey);
+      }}
+      title="この行に指摘する（なぞる / Shift+クリックで範囲）"
     >
       {no}
     </button>
@@ -636,12 +738,7 @@ function SideCell({
     );
   }
   const no = side === "old" ? line.oldNumber : line.newNumber;
-  const picked =
-    no !== null &&
-    selection?.file === file.path &&
-    selection.side === side &&
-    no >= selection.start &&
-    no <= selection.end;
+  const picked = inSelection(selection, file.path, side, no);
 
   return (
     <>
@@ -650,7 +747,7 @@ function SideCell({
         picked={picked}
         kind={line.kind}
         side={side}
-        onPick={(extend) => {
+        onPick={(phase, extend) => {
           if (no === null) return;
           onGutter({
             file,
@@ -658,6 +755,7 @@ function SideCell({
             line: no,
             content: line.content,
             context,
+            phase,
             extend,
           });
         }}
