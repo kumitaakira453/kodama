@@ -481,6 +481,22 @@ impl Git {
         }
     }
 
+    /// そのファイルに未コミットの変更が残っているか。
+    pub fn has_pending_change(&self, worktree: &str, path: &str) -> bool {
+        self.run(worktree, &["status", "--porcelain", "--", path], false)
+            .map(|out| !out.trim().is_empty())
+            .unwrap_or(false)
+    }
+
+    /// そのファイルを最後に触ったコミット。履歴に無ければ None。
+    pub fn last_commit_touching(&self, worktree: &str, path: &str) -> Option<String> {
+        let out = self
+            .run(worktree, &["log", "-1", "--format=%H", "--", path], false)
+            .ok()?;
+        let sha = out.trim();
+        (!sha.is_empty()).then(|| sha.to_string())
+    }
+
     /// コミットの第 1 親。親が無い（最初のコミット）なら空ツリーを返す。
     pub fn first_parent(&self, worktree: &str, sha: &str) -> String {
         self.run(worktree, &["rev-parse", "--verify", "--quiet", &format!("{sha}^")], false)

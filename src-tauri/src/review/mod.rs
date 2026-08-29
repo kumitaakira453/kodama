@@ -8,8 +8,10 @@ pub mod store;
 
 use crate::domain::ids;
 use crate::error::{KdError, KdResult};
+use crate::domain::spec::BlobRef;
+use crate::infra::git::Git;
 use crate::review::model::{
-    Comment, Status, Thread, ThreadInput, ThreadView,
+    AnchorState, Comment, Status, Thread, ThreadInput, ThreadView,
 };
 
 /// 一覧の絞り込み。ファイル名だけでは絞り込みキーとして成立しない。
@@ -47,8 +49,7 @@ pub fn list(filter: &Filter) -> KdResult<Vec<ThreadView>> {
             None => true,
         })
         .map(|thread| {
-            let current = read_current(&thread);
-            let resolved = anchor::resolve(&thread, current.as_deref());
+            let resolved = resolve_anchor(&thread);
             ThreadView {
                 thread,
                 anchor: resolved.state,
@@ -74,8 +75,7 @@ pub fn get(id: &str) -> KdResult<ThreadView> {
         .into_iter()
         .find(|t| t.id == id)
         .ok_or_else(|| KdError::new(format!("指摘 #{id} が見つかりません。")))?;
-    let current = read_current(&thread);
-    let resolved = anchor::resolve(&thread, current.as_deref());
+    let resolved = resolve_anchor(&thread);
     Ok(ThreadView {
         thread,
         anchor: resolved.state,
@@ -163,4 +163,69 @@ fn fresh_id(ledger: &model::Ledger, seed: &str) -> String {
 
 fn read_current(thread: &Thread) -> Option<String> {
     std::fs::read_to_string(std::path::Path::new(&thread.repo).join(&thread.file)).ok()
+}
+
+/// 未コミットの変更だけを見る比較か。
+///
+/// コミットを含む比較は、コミットしても中身が空にならない。取り込まれたか
+/// どうかを問うのは、未コミット側だけを見ている指摘に限る。
+fn is_pending_scope(revision_key: &str) -> bool {
+    ["uncommitted:", "staged:", "working:"]
+        .iter()
+        .any(|prefix| revision_key.starts_with(prefix))
+}
+
+/// 未コミットの変更に付けた指摘が、そのあとコミットへ取り込まれていないか。
+///
+/// 取り込まれると、その比較からは何も見えなくなる。行そのものは残っている
+/// ので追跡自体は成功し、「指摘した時点のまま」と出てしまう。どこへ行ったの
+/// かを状態にしないと、対応済みなのか放置なのか判断できない。
+///
+/// 消したのか取り込まれたのかは、コミット側に本文が在るかで分ける。
+fn committed_into(thread: &Thread) -> Option<AnchorState> {
+    if !is_pending_scope(&thread.revision_key) || thread.quote.is_empty() {
+        return None;
+    }
+    let git = Git::new(&thread.repo);
+    // 変更がまだ残っているなら、取り込まれていない。
+    if git.has_pending_change(&thread.repo, &thread.file) {
+        return None;
+    }
+    let head = git.read_blob(
+        &thread.repo,
+        &BlobRef::Tree {
+            rev: "HEAD".to_string(),
+        },
+        &thread.file,
+    )?;
+    if !head.contains(&thread.quote) {
+        return None;
+    }
+    git.last_commit_touching(&thread.repo, &thread.file)
+        .map(|sha| AnchorState::Committed { sha })
+}
+
+/// 追跡の結果に、コミットへ取り込まれた事実を重ねる。
+fn resolve_anchor(thread: &Thread) -> anchor::Resolved {
+    let current = read_current(thread);
+    let mut resolved = anchor::resolve(thread, current.as_deref());
+    if let Some(state) = committed_into(thread) {
+        resolved.state = state;
+    }
+    resolved
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn 未コミットを見る比較だけを対象にする() {
+        assert!(is_pending_scope("uncommitted:/repo"));
+        assert!(is_pending_scope("staged:/repo"));
+        assert!(is_pending_scope("working:/repo"));
+        // コミットを含む比較は、コミットしても中身が空にならない。
+        assert!(!is_pending_scope("range:aaa..bbb"));
+        assert!(!is_pending_scope("everything:/repo"));
+    }
 }
