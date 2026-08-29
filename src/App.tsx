@@ -10,7 +10,7 @@ import { SettingsModal } from "./components/projects/SettingsModal";
 import { TopBar } from "./components/topbar/TopBar";
 import { TreePane } from "./components/tree/TreePane";
 import { Resizer } from "./components/ui/Resizer";
-import { RingSpinner } from "./components/ui/RingSpinner";
+import { Loading } from "./components/empty/Loading";
 import { Toasts } from "./components/ui/Toasts";
 import { useDiff } from "./hooks/useDiff";
 import { useProjects } from "./hooks/useProjects";
@@ -134,7 +134,7 @@ export default function App() {
   if (loading && projects.length === 0) {
     return (
       <div className="kd-boot">
-        <RingSpinner size={32} />
+        <Loading text="プロジェクトを読み込んでいます" />
       </div>
     );
   }

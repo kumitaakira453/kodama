@@ -1,6 +1,13 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { useFileFilter } from "../../hooks/useFileFilter";
 import { useHighlight } from "../../hooks/useHighlight";
@@ -37,9 +44,9 @@ import {
   wordDiffAtom,
   type LineSelection,
 } from "../../state/atoms";
+import { Loading } from "../empty/Loading";
 import { Composer } from "../review/Composer";
 import { ThreadCard } from "../review/ThreadCard";
-import { RingSpinner } from "../ui/RingSpinner";
 import { DiffCode } from "./DiffCode";
 import { FileHeader } from "./FileHeader";
 
@@ -65,8 +72,11 @@ interface GutterHit {
   line: number;
   content: string;
   context: string;
-  /** `start` は押した瞬間、`drag` は押したまま通過したとき。 */
-  phase: "start" | "drag";
+  /**
+   * `start` は押した瞬間、`drag` は押したまま通過したとき、`click` はキーボード。
+   * キーボードには離す動作が無いので、なぞっている状態に入れてはいけない。
+   */
+  phase: "start" | "drag" | "click";
   extend: boolean;
 }
 
@@ -143,9 +153,24 @@ export function DiffCanvas({
     () => applyFilter(diff?.files ?? [], fileFilter),
     [diff, fileFilter],
   );
+  /**
+   * なぞっているあいだは入力欄を出さない。
+   *
+   * 入力欄は選んだ範囲の直下に挟まる。選びながら出すと、次に選びたい行が
+   * その高さのぶん押し下げられ、越えないと届かなくなる。
+   */
+  const [selecting, setSelecting] = useState(false);
   const rows = useMemo(
-    () => buildRows(files, mode, collapsed, threads, selection, expanded),
-    [files, mode, collapsed, threads, selection, expanded],
+    () =>
+      buildRows(
+        files,
+        mode,
+        collapsed,
+        threads,
+        selecting ? null : selection,
+        expanded,
+      ),
+    [files, mode, collapsed, threads, selection, selecting, expanded],
   );
   const headerIndex = useMemo(() => fileHeaderIndex(rows), [rows]);
   const digits = useMemo(() => maxLineDigits(files), [files]);
@@ -183,6 +208,7 @@ export function DiffCanvas({
   useEffect(() => {
     const stop = () => {
       dragging.current = false;
+      setSelecting(false);
     };
     window.addEventListener("mouseup", stop);
     return () => window.removeEventListener("mouseup", stop);
@@ -215,7 +241,9 @@ export function DiffCanvas({
         return;
       }
 
-      dragging.current = true;
+      const byMouse = hit.phase === "start";
+      dragging.current = byMouse;
+      setSelecting(byMouse);
       setSelection((prev) => {
         if (
           hit.extend &&
@@ -376,11 +404,7 @@ export function DiffCanvas({
   }, [topFile, headerIndex, items, scrollOffset]);
 
   if (loading && !diff) {
-    return (
-      <div className="kd-canvas__center">
-        <RingSpinner size={28} />
-      </div>
-    );
+    return <Loading text="差分を読み込んでいます" detail={worktree ?? undefined} />;
   }
 
   if (!diff) {
@@ -681,7 +705,7 @@ function Gutter({
   /** 左右に並べたときは行ではなくセルごとに色を付けるので、種別をここに持つ。 */
   kind?: DiffLineKind;
   side?: Side;
-  onPick: (phase: "start" | "drag", extend: boolean) => void;
+  onPick: (phase: "start" | "drag" | "click", extend: boolean) => void;
 }) {
   if (no === null) {
     return <span className="kd-num" data-kind={kind} data-side={side} />;
@@ -702,7 +726,7 @@ function Gutter({
       onKeyDown={(e) => {
         if (e.key !== "Enter" && e.key !== " ") return;
         e.preventDefault();
-        onPick("start", e.shiftKey);
+        onPick("click", e.shiftKey);
       }}
       title="この行に指摘する（なぞる / Shift+クリックで範囲）"
     >

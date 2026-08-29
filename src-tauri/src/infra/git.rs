@@ -238,6 +238,16 @@ impl Git {
     /// このブランチで積んでいないコミットまで差分に入る。
     pub fn default_base_ref(&self, worktree: &str) -> Option<String> {
         let current = self.current_branch(worktree);
+
+        // 既定ブランチそのものに居るときは、分岐元が存在しない。上流を基準に
+        // すると「まだ押していないコミット」が見える。別の既定ブランチ候補を
+        // 当てると、develop に居るのに main との差分という無関係な比較になる。
+        if let Some(branch) = &current {
+            if self.is_default_branch(worktree, branch) {
+                return self.upstream_ref(worktree);
+            }
+        }
+
         let mut best: Option<(i64, String)> = None;
 
         for candidate in self.base_candidates(worktree) {
@@ -262,7 +272,39 @@ impl Git {
             }
         }
 
+        // どれとも分岐していないなら、上流を基準にする。
         best.map(|(_, name)| name)
+            .or_else(|| self.upstream_ref(worktree))
+    }
+
+    /// そのブランチがリポジトリの既定ブランチか。
+    fn is_default_branch(&self, worktree: &str, branch: &str) -> bool {
+        let head = self
+            .run(
+                worktree,
+                &["symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+                false,
+            )
+            .unwrap_or_default();
+        head.trim() == format!("origin/{branch}")
+    }
+
+    /// 追跡している上流の ref 名。設定が無ければ None。
+    fn upstream_ref(&self, worktree: &str) -> Option<String> {
+        let out = self
+            .run(
+                worktree,
+                &[
+                    "rev-parse",
+                    "--abbrev-ref",
+                    "--symbolic-full-name",
+                    "@{upstream}",
+                ],
+                false,
+            )
+            .ok()?;
+        let name = out.trim();
+        (!name.is_empty()).then(|| name.to_string())
     }
 
     /// 分岐元になりうる ref。実在するものだけを返す。
