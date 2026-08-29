@@ -71,8 +71,6 @@ pub struct RevisionList {
     pub commits: Vec<CommitInfo>,
     pub branches: Vec<String>,
     /// merge-base の算出に使える既定の base ref。見つからなければ None。
+    /// これが決まっているとき、`commits` は分岐点から現在までに絞られる。
     pub default_base: Option<String>,
-    /// `default_base` から現在までに含まれるコミットの sha。
-    /// 「ブランチ全体」を選んだときに、一覧のどれが該当するかを示すのに使う。
-    pub branch_shas: Vec<String>,
 }

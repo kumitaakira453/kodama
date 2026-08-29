@@ -60,10 +60,11 @@ export interface PrInfo {
 export interface RevisionList {
   commits: CommitInfo[];
   branches: string[];
-  /** merge-base 比較に使える既定の base ref。見つからなければ null。 */
+  /**
+   * merge-base 比較に使える既定の base ref。見つからなければ null。
+   * これが決まっているとき、`commits` は分岐点から現在までに絞られる。
+   */
   defaultBase: string | null;
-  /** `defaultBase` から現在までに含まれるコミットの sha。 */
-  branchShas: string[];
 }
 
 /** 何と何の差分を見るか。 */
@@ -71,6 +72,8 @@ export type DiffSpec =
   /** 連続したコミット群。oldest の第 1 親から newest までを見る。 */
   | { kind: "commitRange"; oldest: string; newest: string }
   | { kind: "range"; base: string; target: string; mergeBase: boolean }
+  /** 分岐点から作業ツリーまで。コミット済みと未コミットをまとめて見る。 */
+  | { kind: "everything"; base: string }
   /** 全未コミット変更。 */
   | { kind: "uncommitted" }
   /** index と HEAD の差分。 */

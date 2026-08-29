@@ -185,11 +185,23 @@ impl Git {
         parse_commits(&out).into_iter().next()
     }
 
-    /// 直近のコミット一覧。revision セレクタに並べる。
-    pub fn commit_log(&self, worktree: &str, limit: u32) -> KdResult<Vec<CommitInfo>> {
+    /// コミット一覧。revision セレクタに並べる。
+    ///
+    /// `range` を渡すとその範囲に絞る。分岐元が分かるなら、そのブランチで
+    /// 積んだコミットだけを並べたい。共有部分まで並べても選ぶ対象にならない。
+    pub fn commit_log(
+        &self,
+        worktree: &str,
+        limit: u32,
+        range: Option<&str>,
+    ) -> KdResult<Vec<CommitInfo>> {
         let fmt = format!("--format=%H{SEP}%h{SEP}%s{SEP}%an{SEP}%ct{SEP}%cr{SEP}%b");
         let count = format!("-{limit}");
-        let out = self.run(worktree, &["log", &count, "-z", &fmt], false)?;
+        let mut args = vec!["log", &count, "-z", &fmt];
+        if let Some(range) = range {
+            args.push(range);
+        }
+        let out = self.run(worktree, &args, false)?;
         Ok(parse_commits(&out))
     }
 
@@ -241,22 +253,6 @@ impl Git {
             }
         }
         None
-    }
-
-    /// `base` との共通祖先から現在までに含まれるコミットの sha。
-    ///
-    /// 「ブランチ全体」がコミット一覧のどのコミットを指すのかを示すのに使う。
-    /// 一覧より深いところは要らないので、同じ上限で切る。
-    pub fn branch_commits(&self, worktree: &str, base: &str, limit: u32) -> Vec<String> {
-        let count = format!("--max-count={limit}");
-        let range = format!("{base}..HEAD");
-        self.run(worktree, &["rev-list", &count, &range], false)
-            .unwrap_or_default()
-            .lines()
-            .map(str::trim)
-            .filter(|line| !line.is_empty())
-            .map(str::to_string)
-            .collect()
     }
 
     pub fn merge_base(&self, worktree: &str, base: &str, target: &str) -> Option<String> {

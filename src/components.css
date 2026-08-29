@@ -300,13 +300,35 @@
 }
 
 .kd-revrow[data-empty],
+.kd-revrow:disabled,
 .kd-revrow:has(:disabled) {
   opacity: 0.45;
 }
 
+.kd-revrow:disabled,
 .kd-revrow:has(:disabled),
 .kd-revrow :disabled {
   cursor: default;
+}
+
+/* 上位の選択肢の一部であることを字下げで示す。 */
+.kd-revrow[data-child] {
+  padding-left: 22px;
+}
+
+/* 行全体がボタンの版。内側の body は押せる要素ではないので指定を戻す。 */
+.kd-revrow--pseudo {
+  padding: 0;
+}
+
+.kd-revrow--pseudo .kd-revrow__body {
+  cursor: inherit;
+}
+
+.kd-modal__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .kd-revrow__box {

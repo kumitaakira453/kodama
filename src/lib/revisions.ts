@@ -1,7 +1,18 @@
 import type { CommitInfo, DiffSpec } from "./types";
 
-/** git のコミットではない、一覧の先頭に並べる比較対象。 */
-export type PseudoId = "uncommitted" | "staged" | "unstaged" | "branch";
+/**
+ * 個々のコミットを選ぶ以外の比較対象。
+ *
+ * 互いに包含関係がある。`everything` が一番広く、その中に `branch` と
+ * `uncommitted` が並び、`uncommitted` の中に `staged` と `unstaged` がある。
+ * 画面ではこの関係が見えるように並べる。
+ */
+export type PseudoId =
+  | "everything"
+  | "branch"
+  | "uncommitted"
+  | "staged"
+  | "unstaged";
 
 /**
  * コミット一覧での選択。
@@ -14,10 +25,11 @@ export type CommitSelection =
   | { kind: "commits"; anchor: string; focus: string };
 
 export const PSEUDO_LABELS: Record<PseudoId, string> = {
+  everything: "すべての変更",
+  branch: "すべてのコミット",
   uncommitted: "未コミットの変更",
   staged: "ステージ済み",
   unstaged: "未ステージ",
-  branch: "すべてのコミット",
 };
 
 /**
@@ -40,6 +52,9 @@ export function buildSpec(
         return { kind: "staged" };
       case "unstaged":
         return { kind: "unstaged" };
+      case "everything":
+        if (!defaultBase) return null;
+        return { kind: "everything", base: defaultBase };
       case "branch":
         if (!defaultBase) return null;
         return {
@@ -88,18 +103,17 @@ export function resolveRange(
 /**
  * ある sha が選択に入っているか。コミット行のチェック状態に使う。
  *
- * 「ブランチ全体」は分岐点から現在までのコミットを選ぶことなので、該当する
- * コミットにもチェックを付ける。一覧には分岐点より前のコミットも並ぶため、
- * どこまでが該当するかは git が返した sha の集合で判定する。
+ * 「すべてのコミット」は個々のコミットを全部選ぶことと同じなので、
+ * そのときも一覧にチェックを付ける。
  */
 export function isInSelection(
   sha: string,
   selection: CommitSelection,
   commits: CommitInfo[],
-  branchShas?: ReadonlySet<string>,
 ): boolean {
   if (selection.kind === "pseudo") {
-    return selection.id === "branch" && (branchShas?.has(sha) ?? false);
+    // 一覧は分岐点から現在までなので、ブランチ全体を選ぶと全部が入る。
+    return selection.id === "branch" || selection.id === "everything";
   }
   const a = commits.findIndex((c) => c.sha === selection.anchor);
   const b = commits.findIndex((c) => c.sha === selection.focus);
@@ -120,9 +134,9 @@ export function describeSelection(
   defaultBase: string | null,
 ): string {
   if (selection.kind === "pseudo") {
-    if (selection.id === "branch") {
-      return defaultBase ? "すべてのコミット" : "比較元のブランチが見つかりません";
-    }
+    const needsBase =
+      selection.id === "branch" || selection.id === "everything";
+    if (needsBase && !defaultBase) return "比較元のブランチが見つかりません";
     return PSEUDO_LABELS[selection.id];
   }
   const range = resolveRange(selection, commits);
@@ -138,12 +152,22 @@ export function explainSelection(
   defaultBase: string | null,
 ): string {
   if (selection.kind === "pseudo") {
-    if (selection.id === "branch") {
-      return defaultBase
-        ? `${defaultBase} との分岐点から現在まで`
-        : "比較元のブランチが見つかりません";
+    switch (selection.id) {
+      case "everything":
+        return defaultBase
+          ? `${defaultBase} との分岐点から作業ツリーまで`
+          : "比較元のブランチが見つかりません";
+      case "branch":
+        return defaultBase
+          ? `${defaultBase} との分岐点から HEAD まで`
+          : "比較元のブランチが見つかりません";
+      case "uncommitted":
+        return "HEAD から作業ツリーまで";
+      case "staged":
+        return "HEAD から index まで";
+      case "unstaged":
+        return "index から作業ツリーまで";
     }
-    return PSEUDO_LABELS[selection.id];
   }
   const range = resolveRange(selection, commits);
   if (!range) return "コミットを選んでください";

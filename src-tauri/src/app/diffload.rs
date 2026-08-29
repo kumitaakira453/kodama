@@ -66,6 +66,25 @@ pub fn resolve(worktree: &str, spec: &DiffSpec) -> KdResult<ResolvedSpec> {
             })
         }
 
+        DiffSpec::Everything { base } => {
+            // 引数を 1 つだけ渡すと、git はそれと作業ツリーを比べる。
+            let base_sha = git.merge_base(worktree, base, "HEAD").ok_or_else(|| {
+                KdError::new(format!("{base} と HEAD の共通祖先が見つかりません。"))
+            })?;
+            Ok(ResolvedSpec {
+                spec: spec.clone(),
+                revision_key: revision_key(spec, worktree, "", ""),
+                left: BlobRef::Tree {
+                    rev: base_sha.clone(),
+                },
+                right: BlobRef::Worktree,
+                base_label: base.clone(),
+                target_label: "作業ツリー".to_string(),
+                mutable: true,
+                diff_args: vec![base_sha],
+            })
+        }
+
         DiffSpec::Uncommitted => Ok(ResolvedSpec {
             spec: spec.clone(),
             revision_key: revision_key(spec, worktree, "", ""),

@@ -7,9 +7,11 @@ interface ModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** 下端に固定して出す操作。本文がスクロールしても隠れない。 */
+  footer?: ReactNode;
 }
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, children, footer }: ModalProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -39,6 +41,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
           </button>
         </header>
         <div className="kd-modal__body">{children}</div>
+        {footer ? <footer className="kd-modal__foot">{footer}</footer> : null}
       </div>
     </div>,
     document.body,

@@ -64,6 +64,18 @@ export function Dropdown({
     setPlace(open ? placeMenu(buttonRef.current, width) : null);
   }, [open, width]);
 
+  // 中身が `width` より広くなることがある。描いたあとの実寸で置き直す。
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!menu) return;
+    const rect = menu.getBoundingClientRect();
+    const over = rect.right - (window.innerWidth - EDGE);
+    if (over <= 0) return;
+    setPlace((prev) =>
+      prev ? { ...prev, left: Math.max(EDGE, prev.left - over) } : prev,
+    );
+  }, [place?.left, place?.top, place?.bottom]);
+
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {

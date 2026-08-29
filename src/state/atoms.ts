@@ -88,7 +88,9 @@ export const selectedWorktreeAtom = atomWithStorage<string | null>(
 );
 export const commitSelectionAtom = atomWithStorage<CommitSelection>(
   "kodama.commitSelection",
-  { kind: "pseudo", id: "uncommitted" },
+  // 一番広いところから始める。レビューで見たいのはたいてい全体で、
+  // そこから絞る方が、狭いところから広げるより手数が少ない。
+  { kind: "pseudo", id: "everything" },
   undefined,
   sync,
 );

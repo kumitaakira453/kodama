@@ -16,6 +16,8 @@ pub enum DiffSpec {
         #[serde(default)]
         merge_base: bool,
     },
+    /// 分岐点から作業ツリーまで。コミット済みと未コミットをまとめて見る。
+    Everything { base: String },
     /// 全未コミット変更。HEAD と作業ツリーの差分に未追跡ファイルを足す。
     Uncommitted,
     /// index と HEAD の差分。
@@ -27,7 +29,10 @@ pub enum DiffSpec {
 impl DiffSpec {
     /// 未追跡ファイルを差分に含めるか。作業ツリーを見る指定だけが対象。
     pub fn includes_untracked(&self) -> bool {
-        matches!(self, DiffSpec::Uncommitted | DiffSpec::Unstaged)
+        matches!(
+            self,
+            DiffSpec::Everything { .. } | DiffSpec::Uncommitted | DiffSpec::Unstaged
+        )
     }
 }
 
@@ -71,6 +76,7 @@ pub fn revision_key(spec: &DiffSpec, worktree: &str, left_sha: &str, right_sha: 
         DiffSpec::CommitRange { .. } | DiffSpec::Range { .. } => {
             format!("range:{left_sha}..{right_sha}")
         }
+        DiffSpec::Everything { .. } => format!("everything:{worktree}"),
         DiffSpec::Uncommitted => format!("uncommitted:{worktree}"),
         DiffSpec::Staged => format!("staged:{worktree}"),
         DiffSpec::Unstaged => format!("working:{worktree}"),
