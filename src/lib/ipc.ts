@@ -59,6 +59,13 @@ export const api = {
     to: number,
   ) => invoke<string[]>("read_lines", { worktree, spec, path, side, from, to }),
 
+  readImage: (
+    worktree: string,
+    spec: DiffSpec,
+    path: string,
+    side: "old" | "new",
+  ) => invoke<string | null>("read_image", { worktree, spec, path, side }),
+
   installedApps: () => invoke<AppTarget[]>("installed_apps"),
   openInApp: (appId: string, path: string, line: number | null) =>
     invoke<void>("open_in_app", { appId, path, line }),

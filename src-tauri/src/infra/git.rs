@@ -244,7 +244,9 @@ impl Git {
         // 当てると、develop に居るのに main との差分という無関係な比較になる。
         if let Some(branch) = &current {
             if self.is_default_branch(worktree, branch) {
-                return self.upstream_ref(worktree);
+                return self
+                    .upstream_ref(worktree)
+                    .filter(|up| self.has_commits_ahead(worktree, up));
             }
         }
 
@@ -287,6 +289,20 @@ impl Git {
             )
             .unwrap_or_default();
         head.trim() == format!("origin/{branch}")
+    }
+
+    /// その ref より HEAD が先行しているか。
+    ///
+    /// 追いついているなら、それを基準にしても空の比較にしかならない。基準が
+    /// 無いものとして扱い、最初のコミットから見せる側に倒す。
+    fn has_commits_ahead(&self, worktree: &str, r#ref: &str) -> bool {
+        let Some(base) = self.merge_base(worktree, r#ref, "HEAD") else {
+            return false;
+        };
+        match self.rev_parse(worktree, "HEAD") {
+            Ok(head) => base != head,
+            Err(_) => false,
+        }
     }
 
     /// 追跡している上流の ref 名。設定が無ければ None。
@@ -444,15 +460,25 @@ impl Git {
     ///
     /// バイナリや不正な UTF-8 は None にする。ハイライトも行分割もできない。
     pub fn read_blob(&self, worktree: &str, blob: &BlobRef, path: &str) -> Option<String> {
-        let bytes = match blob {
-            BlobRef::Worktree => std::fs::read(std::path::Path::new(worktree).join(path)).ok()?,
-            BlobRef::Index => capture_blob(worktree, &format!(":{path}"))?,
-            BlobRef::Tree { rev } => capture_blob(worktree, &format!("{rev}:{path}"))?,
-        };
+        let bytes = self.read_blob_bytes(worktree, blob, path)?;
         if bytes.contains(&0) {
             return None;
         }
         String::from_utf8(bytes).ok()
+    }
+
+    /// 指定した側のファイルを生のまま読む。画像はここから読む。
+    pub fn read_blob_bytes(
+        &self,
+        worktree: &str,
+        blob: &BlobRef,
+        path: &str,
+    ) -> Option<Vec<u8>> {
+        match blob {
+            BlobRef::Worktree => std::fs::read(std::path::Path::new(worktree).join(path)).ok(),
+            BlobRef::Index => capture_blob(worktree, &format!(":{path}")),
+            BlobRef::Tree { rev } => capture_blob(worktree, &format!("{rev}:{path}")),
+        }
     }
 
     /// コミットの第 1 親。親が無い（最初のコミット）なら空ツリーを返す。

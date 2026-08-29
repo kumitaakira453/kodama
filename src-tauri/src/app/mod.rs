@@ -1,5 +1,6 @@
 pub mod diffload;
 pub mod highlight;
+pub mod image;
 pub mod projects;
 pub mod revisions;
 pub mod state;

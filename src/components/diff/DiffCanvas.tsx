@@ -49,6 +49,7 @@ import { Composer } from "../review/Composer";
 import { ThreadCard } from "../review/ThreadCard";
 import { DiffCode } from "./DiffCode";
 import { FileHeader } from "./FileHeader";
+import { ImagePair } from "./ImagePair";
 
 interface DiffCanvasProps {
   viewed: Record<string, ViewedStatus>;
@@ -548,6 +549,13 @@ const Row = memo(function Row({
 
     case "notice":
       return <div className="kd-notice">{row.text}</div>;
+
+    case "image":
+      return (
+        <div className="kd-inset">
+          <ImagePair file={row.file} />
+        </div>
+      );
 
     case "thread":
       return (

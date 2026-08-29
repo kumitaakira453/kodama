@@ -24,6 +24,17 @@ pub async fn file_diff(
     run_query(move || diffload::load_file(&worktree, &spec, &path, context)).await
 }
 
+/// 画像を data URL で読む。差分の本文が読めない画像を並べて見せるのに使う。
+#[tauri::command]
+pub async fn read_image(
+    worktree: String,
+    spec: DiffSpec,
+    path: String,
+    side: crate::app::diffload::BlobSide,
+) -> KdResult<Option<String>> {
+    run_query(move || crate::app::image::read(&worktree, &spec, &path, side)).await
+}
+
 /// ハンクの外の行を読む。展開ボタンが使う。
 #[tauri::command]
 pub async fn read_lines(

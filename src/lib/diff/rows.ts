@@ -1,4 +1,5 @@
 import type { Expanded, LineSelection } from "../../state/atoms";
+import { isImagePath } from "./image";
 import type {
   DiffFile,
   DiffHunk,
@@ -40,6 +41,8 @@ export type RowItem =
       context: string;
     }
   | { type: "notice"; key: string; file: DiffFile; text: string }
+  /** 画像の変更前後。差分の本文の代わり、または本文の手前に置く。 */
+  | { type: "image"; key: string; file: DiffFile }
   | { type: "thread"; key: string; file: DiffFile; view: ThreadView }
   | { type: "composer"; key: string; file: DiffFile; selection: LineSelection }
   | { type: "file-gap"; key: string };
@@ -51,6 +54,8 @@ export const ROW_HEIGHT = {
   line: 24,
   split: 24,
   notice: 56,
+  // 可変。画像が届くまでの見積もり。
+  image: 220,
   // 可変。実測で置き換わるまでの見積もり。
   thread: 120,
   composer: 148,
@@ -82,14 +87,23 @@ export function buildRows(
     });
 
     if (!isCollapsed) {
+      // 画像は絵を見ないと変わったかどうか分からない。差分が読めるもの
+      // （svg）でも、本文の手前に変更前後を出す。
+      if (isImagePath(file.path)) {
+        rows.push({ type: "image", key: `${file.path}::image`, file });
+      }
+
       const notice = noticeFor(file);
       if (notice) {
-        rows.push({
-          type: "notice",
-          key: `${file.path}::notice`,
-          file,
-          text: notice,
-        });
+        // 画像を出しているなら、読めない旨をもう一度言う必要はない。
+        if (!isImagePath(file.path)) {
+          rows.push({
+            type: "notice",
+            key: `${file.path}::notice`,
+            file,
+            text: notice,
+          });
+        }
       } else {
         appendHunks(
           rows,
