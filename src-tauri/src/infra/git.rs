@@ -230,17 +230,56 @@ impl Git {
             .unwrap_or(false)
     }
 
-    /// 比較の既定 base として使える ref を探す。リポジトリごとに既定ブランチ名が
-    /// 違うため決め打ちにせず、上流の HEAD から順に候補を試す。
+    /// 比較の既定 base として使える ref を探す。
+    ///
+    /// このブランチが**どこから分岐したか**を当てる。候補それぞれと HEAD の
+    /// 共通祖先を求め、いちばん新しいものを採る。リポジトリの既定ブランチを
+    /// 決め打ちで使うと、develop から切った枝を main と比べることになり、
+    /// このブランチで積んでいないコミットまで差分に入る。
     pub fn default_base_ref(&self, worktree: &str) -> Option<String> {
+        let current = self.current_branch(worktree);
+        let mut best: Option<(i64, String)> = None;
+
+        for candidate in self.base_candidates(worktree) {
+            // 自分自身と、その上流は分岐元ではない。
+            if let Some(branch) = &current {
+                if &candidate == branch || candidate == format!("origin/{branch}") {
+                    continue;
+                }
+            }
+            let Some(base) = self.merge_base(worktree, &candidate, "HEAD") else {
+                continue;
+            };
+            let Some(when) = self.commit_time(worktree, &base) else {
+                continue;
+            };
+            let better = match &best {
+                None => true,
+                Some((newest, _)) => when > *newest,
+            };
+            if better {
+                best = Some((when, candidate));
+            }
+        }
+
+        best.map(|(_, name)| name)
+    }
+
+    /// 分岐元になりうる ref。実在するものだけを返す。
+    fn base_candidates(&self, worktree: &str) -> Vec<String> {
+        let mut out = Vec::new();
         let head = self
-            .run(worktree, &["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], false)
+            .run(
+                worktree,
+                &["symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+                false,
+            )
             .unwrap_or_default();
         let head = head.trim();
-        if !head.is_empty() && self.ref_exists(worktree, head) {
-            return Some(head.to_string());
+        if !head.is_empty() {
+            out.push(head.to_string());
         }
-        for candidate in [
+        for name in [
             "origin/main",
             "origin/master",
             "origin/develop",
@@ -248,11 +287,29 @@ impl Git {
             "master",
             "develop",
         ] {
-            if self.ref_exists(worktree, candidate) {
-                return Some(candidate.to_string());
-            }
+            out.push(name.to_string());
         }
-        None
+        out.sort();
+        out.dedup();
+        out.retain(|r| self.ref_exists(worktree, r));
+        out
+    }
+
+    /// いま出ているブランチ名。detached HEAD なら None。
+    pub fn current_branch(&self, worktree: &str) -> Option<String> {
+        let out = self
+            .run(worktree, &["symbolic-ref", "--short", "--quiet", "HEAD"], false)
+            .ok()?;
+        let name = out.trim();
+        (!name.is_empty()).then(|| name.to_string())
+    }
+
+    /// committer 日時の epoch 秒。
+    fn commit_time(&self, worktree: &str, rev: &str) -> Option<i64> {
+        let out = self
+            .run(worktree, &["show", "-s", "--format=%ct", rev], false)
+            .ok()?;
+        out.trim().parse().ok()
     }
 
     pub fn merge_base(&self, worktree: &str, base: &str, target: &str) -> Option<String> {

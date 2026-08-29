@@ -20,6 +20,8 @@ interface DropdownProps {
   width?: number;
   /** 差分の行に収める小さい版。上部バーの版より一回り小さくなる。 */
   compact?: boolean;
+  /** アイコンだけの版。本文と開閉の印を出さない。 */
+  iconOnly?: boolean;
   /** 開いている間だけ描く。閉じているときは中身を作らない。 */
   children: (close: () => void) => ReactNode;
 }
@@ -51,6 +53,7 @@ export function Dropdown({
   title,
   width = 280,
   compact = false,
+  iconOnly = false,
   children,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
@@ -107,18 +110,27 @@ export function Dropdown({
   }, [open, close]);
 
   return (
-    <div className="kd-dd" data-compact={compact || undefined}>
+    <div
+      className="kd-dd"
+      data-compact={compact || undefined}
+      data-icon-only={iconOnly || undefined}
+    >
       <button
         ref={buttonRef}
         className="kd-dd__button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label={iconOnly ? title : undefined}
         title={title}
       >
         {icon ? <Icon name={icon} size={compact ? 13 : 15} /> : null}
-        <span className="kd-dd__label">{label}</span>
-        <Icon name="expand_more" size={compact ? 14 : 16} />
+        {iconOnly ? null : (
+          <>
+            <span className="kd-dd__label">{label}</span>
+            <Icon name="expand_more" size={compact ? 14 : 16} />
+          </>
+        )}
       </button>
 
       {open && place

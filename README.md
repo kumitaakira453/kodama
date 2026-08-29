@@ -53,6 +53,19 @@ ln -sf /Applications/kodama.app/Contents/MacOS/kodama /usr/local/bin/kodama
 「システム設定 → プライバシーとセキュリティ」で許可するか、
 `xattr -dr com.apple.quarantine /Applications/kodama.app` を実行する。
 
+### AI 側のスキル
+
+指摘への対応手順をまとめたスキルを同梱している。入れておくと「レビュー見て」の
+一言で、`kodama review list` から `reply` / `resolve` までの流れを踏んでくれる。
+
+```bash
+# どのリポジトリでも使う
+cp -R skills/kodama-review ~/.claude/skills/
+
+# 特定のリポジトリだけで使う
+cp -R skills/kodama-review <対象リポジトリ>/.claude/skills/
+```
+
 ## レビューの流れ
 
 ### 1. 人間が GUI で指摘を書く

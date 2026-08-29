@@ -1,6 +1,8 @@
 import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useFileFilter } from "../../hooks/useFileFilter";
+import { applyFilter, extensionCounts } from "../../lib/diff/filter";
 import { buildTree, type TreeNode } from "../../lib/diff/tree";
 import type { DiffFile, DiffFileStatus } from "../../lib/types";
 import {
@@ -8,7 +10,11 @@ import {
   diffAtom,
   fileFilterAtom,
   focusFilterAtom,
+  hiddenExtensionsAtom,
+  showDeletedAtom,
+  showViewedAtom,
 } from "../../state/atoms";
+import { Dropdown } from "../ui/Dropdown";
 import { Icon } from "../ui/Icon";
 
 const STATUS_MARK: Record<DiffFileStatus, string> = {
@@ -43,17 +49,15 @@ export function TreePane({ onJump }: TreePaneProps) {
   }, [focusRequest]);
 
   const files = diff?.files ?? [];
-  const query = filter.trim().toLowerCase();
+  const fileFilter = useFileFilter();
 
   const { normal, generated } = useMemo(() => {
-    const matched = query
-      ? files.filter((f) => f.path.toLowerCase().includes(query))
-      : files;
+    const matched = applyFilter(files, fileFilter);
     return {
       normal: matched.filter((f) => !f.generated),
       generated: matched.filter((f) => f.generated),
     };
-  }, [files, query]);
+  }, [files, fileFilter]);
 
   const nodes = useMemo(() => buildTree(normal), [normal]);
 
@@ -88,7 +92,11 @@ export function TreePane({ onJump }: TreePaneProps) {
           aria-expanded={!collapsed}
         >
           <Icon name={collapsed ? "chevron_right" : "expand_more"} size={15} />
-          <Icon name="folder" size={15} className="kd-dir__folder" />
+          <Icon
+            name={collapsed ? "folder" : "folder_open"}
+            size={15}
+            className="kd-dir__folder"
+          />
           <span className="kd-dir__name">{node.name}</span>
         </button>
         {collapsed
@@ -100,25 +108,29 @@ export function TreePane({ onJump }: TreePaneProps) {
 
   return (
     <div className="kd-tree">
-      <div className="kd-tree__head">
-        <Icon name="search" size={15} />
-        <input
-          ref={searchRef}
-          className="kd-tree__search"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="ファイルを絞り込む"
-          spellCheck={false}
-        />
-        {filter ? (
-          <button
-            className="kd-tree__clear"
-            onClick={() => setFilter("")}
-            aria-label="絞り込みを解除"
-          >
-            <Icon name="close" size={14} />
-          </button>
-        ) : null}
+      <div className="kd-tree__bar">
+        <div className="kd-tree__head">
+          <Icon name="search" size={15} />
+          <input
+            ref={searchRef}
+            className="kd-tree__search"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="ファイルを絞り込む"
+            spellCheck={false}
+          />
+          {filter ? (
+            <button
+              className="kd-tree__clear"
+              onClick={() => setFilter("")}
+              aria-label="絞り込みを解除"
+            >
+              <Icon name="close" size={14} />
+            </button>
+          ) : null}
+        </div>
+
+        <FilterMenu files={files} />
       </div>
 
       <div className="kd-tree__body">
@@ -159,6 +171,102 @@ export function TreePane({ onJump }: TreePaneProps) {
         ) : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * 拡張子と種類での絞り込み。
+ *
+ * 絞り込みはツリーと差分の両方に効かせる。片方だけに効かせると、
+ * 左に出ていないファイルが右に流れてきて、何を隠したのか分からなくなる。
+ */
+function FilterMenu({ files }: { files: DiffFile[] }) {
+  const [hidden, setHidden] = useAtom(hiddenExtensionsAtom);
+  const [showDeleted, setShowDeleted] = useAtom(showDeletedAtom);
+  const [showViewed, setShowViewed] = useAtom(showViewedAtom);
+
+  const counts = useMemo(() => extensionCounts(files), [files]);
+  const active = hidden.size > 0 || !showDeleted || !showViewed;
+
+  const toggleExt = (ext: string) =>
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(ext)) next.delete(ext);
+      else next.add(ext);
+      return next;
+    });
+
+  return (
+    <Dropdown
+      icon="filter_list"
+      label="絞り込み"
+      title="ファイルの絞り込み"
+      width={240}
+      iconOnly
+    >
+      {() => (
+        <>
+          <p className="kd-menu__head">拡張子</p>
+          {counts.map(({ ext, count }) => (
+            <button
+              key={ext}
+              className="kd-menuitem"
+              onClick={() => toggleExt(ext)}
+            >
+              <Icon
+                name={hidden.has(ext) ? "check_box_outline_blank" : "check_box"}
+                size={15}
+              />
+              <span className="kd-menuitem__text">{ext}</span>
+              <span className="kd-menuitem__count">{count}</span>
+            </button>
+          ))}
+          {counts.length === 0 ? (
+            <p className="kd-menu__note">ファイルがありません</p>
+          ) : null}
+
+          <div className="kd-menu__sep" />
+
+          <button
+            className="kd-menuitem"
+            onClick={() => setShowDeleted(!showDeleted)}
+          >
+            <Icon
+              name={showDeleted ? "check_box" : "check_box_outline_blank"}
+              size={15}
+            />
+            <span className="kd-menuitem__text">削除されたファイル</span>
+          </button>
+          <button
+            className="kd-menuitem"
+            onClick={() => setShowViewed(!showViewed)}
+          >
+            <Icon
+              name={showViewed ? "check_box" : "check_box_outline_blank"}
+              size={15}
+            />
+            <span className="kd-menuitem__text">閲覧済みのファイル</span>
+          </button>
+
+          {active ? (
+            <>
+              <div className="kd-menu__sep" />
+              <button
+                className="kd-menuitem"
+                onClick={() => {
+                  setHidden(new Set());
+                  setShowDeleted(true);
+                  setShowViewed(true);
+                }}
+              >
+                <Icon name="restart_alt" size={15} />
+                <span className="kd-menuitem__text">絞り込みを解除</span>
+              </button>
+            </>
+          ) : null}
+        </>
+      )}
+    </Dropdown>
   );
 }
 

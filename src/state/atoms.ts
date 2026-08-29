@@ -18,7 +18,7 @@ import type {
 /** 初回描画のちらつきを防ぐため、localStorage を同期的に読む。 */
 const sync = { getOnInit: true } as const;
 
-export type Theme = "light" | "dark" | "system";
+export type Theme = "light" | "dark";
 export type MotionPref = "auto" | "reduced";
 
 // ---- 見た目の好み。壊れても再設定で済むので localStorage に置く ----
@@ -127,6 +127,26 @@ export const expandedAtom = atom<Record<string, Expanded>>({});
 
 /** 左ツリーの絞り込み。 */
 export const fileFilterAtom = atom<string>("");
+
+/**
+ * 表示しない拡張子。比較対象ごとに顔ぶれが変わるので持ち越さない。
+ * 前の比較で隠した拡張子が残ると、次の比較でファイルが消えた理由が分からない。
+ */
+export const hiddenExtensionsAtom = atom<Set<string>>(new Set<string>());
+/** 削除されたファイルを出すか。好みなので覚えておく。 */
+export const showDeletedAtom = atomWithStorage<boolean>(
+  "kodama.showDeleted",
+  true,
+  undefined,
+  sync,
+);
+/** 閲覧済みのファイルを出すか。 */
+export const showViewedAtom = atomWithStorage<boolean>(
+  "kodama.showViewed",
+  true,
+  undefined,
+  sync,
+);
 
 /**
  * 「このファイルまで飛べ」という要求。

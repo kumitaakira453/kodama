@@ -37,7 +37,7 @@ export function WorktreeMenu() {
     : "worktree";
 
   return (
-    <Dropdown icon="polyline" label={label} width={480} title="worktree を選ぶ">
+    <Dropdown icon="park" label={label} width={480} title="worktree を選ぶ">
       {(close) => (
         <div className="kd-wtmenu">
           {ordered.map((w) => (

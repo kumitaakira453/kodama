@@ -2,8 +2,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 
+import { useFileFilter } from "../../hooks/useFileFilter";
 import { useHighlight } from "../../hooks/useHighlight";
 import { useToast } from "../../hooks/useToast";
+import { applyFilter } from "../../lib/diff/filter";
 import { api } from "../../lib/ipc";
 import {
   buildRows,
@@ -95,7 +97,11 @@ export function DiffCanvas({
   const { showError } = useToast();
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const files = useMemo(() => diff?.files ?? [], [diff]);
+  const fileFilter = useFileFilter();
+  const files = useMemo(
+    () => applyFilter(diff?.files ?? [], fileFilter),
+    [diff, fileFilter],
+  );
   const rows = useMemo(
     () => buildRows(files, mode, collapsed, threads, selection, expanded),
     [files, mode, collapsed, threads, selection, expanded],
@@ -308,7 +314,11 @@ export function DiffCanvas({
     return (
       <div className="kd-canvas__center kd-canvas__empty">
         <Grove />
-        <p>この比較に変更はありません</p>
+        <p>
+          {diff.files.length > 0
+            ? "絞り込みに一致するファイルがありません"
+            : "この比較に変更はありません"}
+        </p>
         <small>
           {diff.resolved.baseLabel} → {diff.resolved.targetLabel}
         </small>
@@ -317,7 +327,11 @@ export function DiffCanvas({
   }
 
   return (
-    <div className="kd-canvas">
+    <div className="kd-canvas" data-loading={loading || undefined}>
+      {/* 読み込み中も前の差分を出したままにする。急に空にすると、何が起きて
+          いるのか分からない。動いていることだけ上端の帯で示す。 */}
+      {loading ? <div className="kd-canvas__progress" aria-hidden /> : null}
+
       <div
         ref={scrollRef}
         className="kd-canvas__scroll"

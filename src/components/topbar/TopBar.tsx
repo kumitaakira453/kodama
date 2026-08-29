@@ -18,22 +18,16 @@ import { ProgressRing } from "../review/ProgressRing";
 import { RevisionMenu } from "./RevisionMenu";
 import { WorktreeMenu } from "./WorktreeMenu";
 
-const NEXT_THEME: Record<Theme, Theme> = {
-  light: "dark",
-  dark: "system",
-  system: "light",
-};
+const NEXT_THEME: Record<Theme, Theme> = { light: "dark", dark: "light" };
 
 const THEME_ICON: Record<Theme, string> = {
   light: "light_mode",
   dark: "dark_mode",
-  system: "contrast",
 };
 
 const THEME_LABEL: Record<Theme, string> = {
   light: "テーマ: ライト",
   dark: "テーマ: ダーク",
-  system: "テーマ: システムに追従",
 };
 
 interface TopBarProps {
@@ -105,7 +99,11 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
         )}
       </Dropdown>
 
+      <Icon name="chevron_right" size={14} className="kd-topbar__sep" />
+
       <WorktreeMenu />
+
+      <Icon name="chevron_right" size={14} className="kd-topbar__sep" />
 
       <RevisionMenu />
 

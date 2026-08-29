@@ -83,6 +83,13 @@
   flex: 1 1 auto;
 }
 
+/* パンくずの区切り。押せないことが分かるよう、うんと淡くする。 */
+.kd-topbar__sep {
+  flex: 0 0 auto;
+  color: var(--kd-border-strong);
+  pointer-events: none;
+}
+
 .kd-topbar__stat {
   display: flex;
   align-items: center;
@@ -109,15 +116,18 @@
   flex: 0 0 auto;
 }
 
+/* 上部バーはパンくずとして読ませたいので、枠と地色を出さない。箱が 3 つ
+   並ぶと、内容より入れ物のほうが目に付く。 */
 .kd-dd__button {
   display: flex;
   align-items: center;
   gap: 6px;
   max-width: 260px;
   padding: 6px 8px 6px 10px;
-  border: 1px solid var(--kd-border);
+  border: 1px solid transparent;
   border-radius: var(--kd-radius-md);
-  background: var(--kd-elevated);
+  background: transparent;
+  color: inherit;
   cursor: pointer;
   transition:
     background var(--kd-dur-instant) var(--kd-ease-out),
@@ -125,7 +135,22 @@
 }
 
 .kd-dd__button:hover {
-  border-color: var(--kd-border-strong);
+  background: var(--kd-hover);
+}
+
+.kd-dd__button[aria-expanded="true"] {
+  border-color: var(--kd-border);
+  background: var(--kd-elevated);
+}
+
+/* アイコンだけの版。四角い当たり判定にそろえる。 */
+.kd-dd[data-icon-only] .kd-dd__button {
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-color: var(--kd-border);
+  background: var(--kd-elevated);
 }
 
 .kd-dd__label {
@@ -215,6 +240,32 @@
   height: 1px;
   margin: 5px 2px;
   background: var(--kd-border);
+}
+
+.kd-menu__head {
+  margin: 2px 0 4px;
+  padding: 0 8px;
+  color: var(--kd-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.kd-menu__note {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--kd-muted);
+  font-size: 11px;
+}
+
+.kd-menuitem__count {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--kd-hover);
+  color: var(--kd-muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .kd-chip {
@@ -381,12 +432,32 @@
   color: var(--kd-accent);
 }
 
+/* 既定のチェックボックスは OS ごとに寸法も角も違い、行の高さで縦に伸びる。
+   自前で描いて、どの環境でも同じ大きさにする。 */
 .kd-revrow__box input {
-  width: 14px;
-  height: 14px;
+  appearance: none;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
   margin: 0;
-  accent-color: var(--kd-accent);
+  border: 1.5px solid var(--kd-border-strong);
+  border-radius: 4px;
+  background: var(--kd-elevated) no-repeat center / 11px 11px;
   cursor: pointer;
+  transition:
+    background-color var(--kd-dur-instant) var(--kd-ease-out),
+    border-color var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-revrow__box input:checked {
+  border-color: var(--kd-accent);
+  background-color: var(--kd-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3L12.5 5'/%3E%3C/svg%3E");
+}
+
+.kd-revrow__box input:focus-visible {
+  outline: 2px solid var(--kd-accent);
+  outline-offset: 2px;
 }
 
 /* 題名を主役にし、sha と作者はその下に添える。sha を先頭に置くと、どれも
@@ -406,11 +477,18 @@
   text-align: left;
 }
 
+/* アイコンは字面の中心に合わせる。baseline だと字形の外に出て浮いて見える。 */
 .kd-revrow__line {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.kd-revrow__line .kd-revrow__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  line-height: 1;
 }
 
 .kd-revrow__body .kd-revrow__text {
@@ -468,12 +546,20 @@
   height: 100%;
 }
 
-.kd-tree__head {
+.kd-tree__bar {
   display: flex;
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
   margin: 10px;
+}
+
+.kd-tree__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 6px 8px;
   border: 1px solid var(--kd-border);
   border-radius: var(--kd-radius-md);
@@ -659,6 +745,41 @@
 .kd-canvas {
   position: relative;
   height: 100%;
+}
+
+/* 読み込み中の帯。前の差分を出したまま、動いていることだけ示す。 */
+.kd-canvas__progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  height: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--kd-accent) 18%, transparent);
+}
+
+.kd-canvas__progress::after {
+  content: "";
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--kd-accent);
+  animation: kd-progress 1.1s var(--kd-ease-out) infinite;
+}
+
+@keyframes kd-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.kd-canvas[data-loading] .kd-canvas__scroll {
+  opacity: 0.55;
+  transition: opacity var(--kd-dur-fast) var(--kd-ease-out);
 }
 
 .kd-canvas__center {
@@ -1221,10 +1342,25 @@ button.kd-row__expand:hover {
   border-top: 1px solid var(--kd-border);
 }
 
+/* 説明が伸びてボタンを潰さないようにする。潰れると文字が縦積みになる。 */
 .kd-modal__note {
   margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--kd-muted);
   font-size: 11px;
+}
+
+.kd-modal__actions {
+  flex: 0 0 auto;
+}
+
+.kd-modal__foot .kd-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .kd-projlist {
