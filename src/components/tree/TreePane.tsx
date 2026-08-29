@@ -1,5 +1,5 @@
 import { useAtom, useAtomValue } from "jotai";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { buildTree, type TreeNode } from "../../lib/diff/tree";
 import type { DiffFile, DiffFileStatus } from "../../lib/types";
@@ -7,6 +7,7 @@ import {
   currentFileAtom,
   diffAtom,
   fileFilterAtom,
+  focusFilterAtom,
 } from "../../state/atoms";
 import { Icon } from "../ui/Icon";
 
@@ -35,6 +36,12 @@ export function TreePane({ onJump }: TreePaneProps) {
   const [filter, setFilter] = useAtom(fileFilterAtom);
   const [collapsedDirs, setCollapsedDirs] = useState<Set<string>>(new Set());
   const [showGenerated, setShowGenerated] = useState(false);
+  const focusRequest = useAtomValue(focusFilterAtom);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (focusRequest > 0) searchRef.current?.select();
+  }, [focusRequest]);
 
   const files = diff?.files ?? [];
   const query = filter.trim().toLowerCase();
@@ -97,6 +104,7 @@ export function TreePane({ onJump }: TreePaneProps) {
       <div className="kd-tree__head">
         <Icon name="search" size={15} />
         <input
+          ref={searchRef}
           className="kd-tree__search"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}

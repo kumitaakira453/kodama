@@ -1747,3 +1747,44 @@
   color: var(--kd-muted);
   font-size: 10px;
 }
+
+/* ==========================================================================
+   キーボード操作の一覧
+   ========================================================================== */
+
+.kd-keys {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+  padding: 10px 12px;
+}
+
+.kd-keys__title {
+  margin: 0 0 6px;
+  color: var(--kd-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.kd-keys__list {
+  margin: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.kd-keys__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.kd-keys__row dt {
+  flex: 0 0 auto;
+  min-width: 96px;
+}
+
+.kd-keys__row dd {
+  margin: 0;
+  font-size: 12.5px;
+}

@@ -136,6 +136,9 @@ export interface Toast {
 
 export const toastsAtom = atom<Toast[]>([]);
 export const settingsOpenAtom = atom<boolean>(false);
+export const shortcutsOpenAtom = atom<boolean>(false);
+/** 絞り込み欄へフォーカスを移す要求。通し番号で毎回届かせる。 */
+export const focusFilterAtom = atom<number>(0);
 
 // ---- 指摘 ----
 

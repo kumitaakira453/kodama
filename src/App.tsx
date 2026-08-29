@@ -18,13 +18,17 @@ import { useRevisions } from "./hooks/useRevisions";
 import { useApps } from "./hooks/useApps";
 import { useThreads } from "./hooks/useThreads";
 import { useViewed } from "./hooks/useViewed";
+import { useShortcuts } from "./hooks/useShortcuts";
 import { useWatch } from "./hooks/useWatch";
+import { ShortcutsModal } from "./components/ui/ShortcutsModal";
 import { useTheme } from "./hooks/useTheme";
 import { useToast } from "./hooks/useToast";
 import {
   jumpRequestAtom,
   selectedWorktreeAtom,
+  focusFilterAtom,
   settingsOpenAtom,
+  shortcutsOpenAtom,
   sidebarOpenAtom,
   sidebarWidthAtom,
 } from "./state/atoms";
@@ -48,9 +52,11 @@ export default function App() {
   useWatch({ onFiles: reloadDiff, onLedger: refreshThreads });
   const { showError } = useToast();
 
-  const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
+  const sidebarOpen = useAtomValue(sidebarOpenAtom);
   const [sidebarWidth, setSidebarWidth] = useAtom(sidebarWidthAtom);
   const [settingsOpen, setSettingsOpen] = useAtom(settingsOpenAtom);
+  const [shortcutsOpen, setShortcutsOpen] = useAtom(shortcutsOpenAtom);
+  const setFocusFilter = useSetAtom(focusFilterAtom);
   const worktree = useAtomValue(selectedWorktreeAtom);
   const setJump = useSetAtom(jumpRequestAtom);
   const [dragging, setDragging] = useState(false);
@@ -117,23 +123,12 @@ export default function App() {
     };
   }, [addProject, showError]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!e.metaKey) return;
-      if (e.key === "o") {
-        e.preventDefault();
-        void handleAddProject();
-      } else if (e.key === "r") {
-        e.preventDefault();
-        reloadAll();
-      } else if (e.key === "b") {
-        e.preventDefault();
-        setSidebarOpen(!sidebarOpen);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [handleAddProject, reloadAll, sidebarOpen, setSidebarOpen]);
+  useShortcuts({
+    onAddProject: () => void handleAddProject(),
+    onReload: reloadAll,
+    onToggleViewed: toggleViewed,
+    onFocusFilter: () => setFocusFilter((n) => n + 1),
+  });
 
   if (loading && projects.length === 0) {
     return (
@@ -194,6 +189,9 @@ export default function App() {
           onRemoveProject={handleRemoveProject}
           onReveal={revealAbsolute}
         />
+      ) : null}
+      {shortcutsOpen ? (
+        <ShortcutsModal onClose={() => setShortcutsOpen(false)} />
       ) : null}
       <Toasts />
     </div>
