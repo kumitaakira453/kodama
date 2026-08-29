@@ -63,8 +63,6 @@ jobs:
           releaseBody: "macOS (Apple Silicon) 用インストーラ (.dmg) を下記 Assets からダウンロードしてください。"
           releaseDraft: true
           prerelease: false
-          # 自動更新はまだ有効にしていない。署名鍵を用意したら、ここを true に
-          # 戻し、tauri.conf.json の bundle.createUpdaterArtifacts と
-          # plugins.updater.pubkey も合わせて設定する。
-          includeUpdaterJson: false
+          # updater 用の latest.json を生成して Release に添付
+          includeUpdaterJson: true
           args: "--target aarch64-apple-darwin"

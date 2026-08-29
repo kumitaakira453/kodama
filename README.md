@@ -53,24 +53,26 @@ ln -sf /Applications/kodama.app/Contents/MacOS/kodama /usr/local/bin/kodama
 「システム設定 → プライバシーとセキュリティ」で許可するか、
 `xattr -dr com.apple.quarantine /Applications/kodama.app` を実行する。
 
-### 自動更新を有効にする
+### 自動更新
 
-アプリは起動時とメニューの「更新を確認」で新しい版を探すが、成果物に署名が
-無いと受け取れない。鍵を用意して初めて動く。
+起動時とメニューの「更新を確認」で新しい版を探し、あればその場で入れ替える。
+
+成り立つのに 2 つ条件が要る。**リポジトリが public であること** —— updater は
+`releases/latest/download/latest.json` を認証なしで取りに行くので、private だと
+404 になる。もう 1 つは**成果物への署名**で、公開鍵と一致しない配布物は受け取
+らない。
+
+鍵を作り直すときは、公開鍵を `src-tauri/tauri.conf.json` の
+`plugins.updater.pubkey` に書き、秘密鍵をリポジトリの Secrets へ入れる。
 
 ```bash
-npx tauri signer generate -w ~/.tauri/kodama.key
+npx tauri signer generate -w ~/.tauri/kodama.key --password ""
 gh secret set TAURI_SIGNING_PRIVATE_KEY < ~/.tauri/kodama.key
-gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD --body ""
 ```
 
-そのうえで 3 か所を戻す。
-
-| 場所 | 設定 |
-|------|------|
-| `src-tauri/tauri.conf.json` | `plugins.updater.pubkey` に公開鍵 |
-| `src-tauri/tauri.conf.json` | `bundle.createUpdaterArtifacts` を `true` |
-| `.github/workflows/release.yml` | `includeUpdaterJson` を `true` |
+**秘密鍵を失うと、それ以降の版を既存の利用者へ届けられない。** 公開鍵は配布物に
+焼き込まれているので、鍵を変えると古い版が新しい署名を検証できなくなる。
 
 ### AI 側のスキル
 
