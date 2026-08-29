@@ -382,6 +382,18 @@
   background: color-mix(in srgb, var(--kd-accent) 12%, transparent);
 }
 
+/* 選択が続くところは内側の角を落とし、一続きの帯に見せる。行ごとに角を
+   丸めると、隣り合った選択のあいだが欠けて見える。 */
+.kd-revrow[data-selected] + .kd-revrow[data-selected] {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.kd-revrow[data-selected]:has(+ .kd-revrow[data-selected]) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 .kd-revrow[data-empty],
 .kd-revrow:disabled,
 .kd-revrow:has(:disabled) {
@@ -642,6 +654,18 @@
   padding-bottom: 24px;
 }
 
+.kd-tree__spacer {
+  position: relative;
+  width: 100%;
+}
+
+.kd-tree__slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
 .kd-tree__note {
   margin: 0;
   padding: 14px 16px;
@@ -660,7 +684,9 @@
   align-items: center;
   gap: 5px;
   width: 100%;
-  padding: 5px 10px;
+  /* 仮想化が見積もる高さと一致させる。中身で伸びると位置がずれる。 */
+  height: 26px;
+  padding: 0 10px;
   border: 0;
   background: transparent;
   color: var(--kd-fg-dim);
@@ -697,7 +723,8 @@
   align-items: center;
   gap: 7px;
   width: 100%;
-  padding: 5px 10px;
+  height: 26px;
+  padding: 0 10px;
   border: 0;
   background: transparent;
   color: inherit;

@@ -68,10 +68,36 @@ pub fn watch(
     let mut debouncer = new_debouncer(DEBOUNCE, None, tx)
         .map_err(|e| KdError::new(format!("ファイル監視を開始できません: {e}")))?;
 
+    // 直下のディレクトリごとに張り、重いものは最初から外す。まとめて 1 回で
+    // 再帰登録すると、除外したいものまで歩いてから捨てることになる。
     let worktree_path = PathBuf::from(worktree);
-    debouncer
-        .watch(&worktree_path, RecursiveMode::Recursive)
-        .map_err(|e| KdError::new(format!("{worktree} を監視できません: {e}")))?;
+    let mut watched = 0usize;
+    if let Ok(entries) = std::fs::read_dir(&worktree_path) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if is_ignored(&path) {
+                continue;
+            }
+            // .git は直下だけ見る。index や HEAD の変化は拾いたいが、
+            // objects まで歩くと数十万ファイルを登録することになる。
+            let shallow =
+                !path.is_dir() || path.file_name().is_some_and(|n| n == ".git");
+            let mode = if shallow {
+                RecursiveMode::NonRecursive
+            } else {
+                RecursiveMode::Recursive
+            };
+            if debouncer.watch(&path, mode).is_ok() {
+                watched += 1;
+            }
+        }
+    }
+    // 直下を読めなかったときは、まとめて張るしかない。
+    if watched == 0 {
+        debouncer
+            .watch(&worktree_path, RecursiveMode::Recursive)
+            .map_err(|e| KdError::new(format!("{worktree} を監視できません: {e}")))?;
+    }
 
     // 台帳はまだ無いことがある。親ディレクトリを見ておけば作成も拾える。
     let ledger_dir = ledger.parent().map(Path::to_path_buf);

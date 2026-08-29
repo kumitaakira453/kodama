@@ -12,19 +12,26 @@ static WATCHERS: LazyLock<Mutex<HashMap<u64, watcher::Handle>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
 
+/// 監視を張る。
+///
+/// 再帰監視の登録はディレクトリを歩くので、大きなリポジトリでは時間がかかる。
+/// UI スレッドで走らせると、その間ウィンドウごと固まる。
 #[tauri::command]
-pub fn start_watch(worktree: String, channel: Channel<WatchEvent>) -> KdResult<u64> {
-    let handle = watcher::watch(&worktree, &store::ledger_path(), move |event| {
-        // 送れなくなっていても監視は続ける。次の停止で片付く。
-        let _ = channel.send(event);
-    })?;
+pub async fn start_watch(worktree: String, channel: Channel<WatchEvent>) -> KdResult<u64> {
+    crate::commands::run_query(move || {
+        let handle = watcher::watch(&worktree, &store::ledger_path(), move |event| {
+            // 送れなくなっていても監視は続ける。次の停止で片付く。
+            let _ = channel.send(event);
+        })?;
 
-    let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    WATCHERS
-        .lock()
-        .map_err(|_| KdError::new("監視の管理に失敗しました。"))?
-        .insert(id, handle);
-    Ok(id)
+        let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        WATCHERS
+            .lock()
+            .map_err(|_| KdError::new("監視の管理に失敗しました。"))?
+            .insert(id, handle);
+        Ok(id)
+    })
+    .await
 }
 
 #[tauri::command]

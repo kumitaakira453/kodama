@@ -1,4 +1,4 @@
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 use crate::app::{projects, state::AppState};
 use crate::domain::models::Project;
@@ -9,9 +9,13 @@ pub fn list_projects(state: State<'_, AppState>) -> KdResult<Vec<Project>> {
     projects::list(&state)
 }
 
+/// フォルダを登録する。
+///
+/// git を数回叩くうえ、ネットワークボリュームだと canonicalize だけで待つ。
+/// UI スレッドで走らせるとウィンドウごと固まるので、ワーカーへ逃がす。
 #[tauri::command]
-pub fn add_project(state: State<'_, AppState>, path: String) -> KdResult<Project> {
-    projects::add(&state, &path)
+pub async fn add_project(app: AppHandle, path: String) -> KdResult<Project> {
+    crate::commands::run_query(move || projects::add(&app.state::<AppState>(), &path)).await
 }
 
 #[tauri::command]

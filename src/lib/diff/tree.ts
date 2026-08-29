@@ -18,6 +18,42 @@ export interface TreeDir {
 
 export type TreeNode = TreeFile | TreeDir;
 
+/** 仮想リストに並べる 1 行。畳んだディレクトリの中身は含めない。 */
+export type TreeRow =
+  | { kind: "dir"; key: string; node: TreeDir; depth: number }
+  | { kind: "file"; key: string; file: DiffFile; name: string; depth: number };
+
+/**
+ * 見えている行だけを平らな列にする。
+ *
+ * 入れ子のまま描くと、変更が多い比較で数千個の要素が常に DOM に居座り、
+ * 絞り込みを 1 文字打つたびに全部を描き直すことになる。
+ */
+export function flattenTree(
+  nodes: TreeNode[],
+  collapsed: ReadonlySet<string>,
+  depth = 0,
+  out: TreeRow[] = [],
+): TreeRow[] {
+  for (const node of nodes) {
+    if (node.type === "file") {
+      out.push({
+        kind: "file",
+        key: node.file.path,
+        file: node.file,
+        name: node.name,
+        depth,
+      });
+      continue;
+    }
+    out.push({ kind: "dir", key: node.path, node, depth });
+    if (!collapsed.has(node.path)) {
+      flattenTree(node.children, collapsed, depth + 1, out);
+    }
+  }
+  return out;
+}
+
 /**
  * フラットなパス配列から階層ツリーを作る。
  *

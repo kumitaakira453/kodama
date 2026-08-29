@@ -1,9 +1,10 @@
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useFileFilter } from "../../hooks/useFileFilter";
 import { applyFilter, extensionCounts } from "../../lib/diff/filter";
-import { buildTree, type TreeNode } from "../../lib/diff/tree";
+import { buildTree, flattenTree, type TreeRow } from "../../lib/diff/tree";
 import type { DiffFile, DiffFileStatus } from "../../lib/types";
 import {
   currentFileAtom,
@@ -25,6 +26,9 @@ const STATUS_MARK: Record<DiffFileStatus, string> = {
   copied: "C",
   untracked: "?",
 };
+
+/** ツリーの行の高さ。CSS と一致させる。 */
+const TREE_ROW_H = 26;
 
 interface TreePaneProps {
   onJump: (path: string) => void;
@@ -61,6 +65,22 @@ export function TreePane({ onJump }: TreePaneProps) {
 
   const nodes = useMemo(() => buildTree(normal), [normal]);
 
+  // 見えている行だけを平らに並べて仮想化する。入れ子のまま描くと、変更が
+  // 多い比較で数千個の要素が居座り、絞り込みを 1 文字打つたびに描き直す。
+  const rows = useMemo(
+    () => flattenTree(nodes, collapsedDirs),
+    [nodes, collapsedDirs],
+  );
+
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => bodyRef.current,
+    estimateSize: () => TREE_ROW_H,
+    overscan: 12,
+    getItemKey: (i) => rows[i].key,
+  });
+
   const toggleDir = (path: string) =>
     setCollapsedDirs((prev) => {
       const next = new Set(prev);
@@ -68,43 +88,6 @@ export function TreePane({ onJump }: TreePaneProps) {
       else next.add(path);
       return next;
     });
-
-  const renderNode = (node: TreeNode, depth: number): React.ReactNode => {
-    if (node.type === "file") {
-      return (
-        <FileRow
-          key={node.file.path}
-          file={node.file}
-          name={node.name}
-          depth={depth}
-          active={node.file.path === current}
-          onJump={onJump}
-        />
-      );
-    }
-    const collapsed = collapsedDirs.has(node.path);
-    return (
-      <div key={node.path}>
-        <button
-          className="kd-dir"
-          style={{ paddingLeft: 8 + depth * 12 }}
-          onClick={() => toggleDir(node.path)}
-          aria-expanded={!collapsed}
-        >
-          <Icon name={collapsed ? "chevron_right" : "expand_more"} size={15} />
-          <Icon
-            name={collapsed ? "folder" : "folder_open"}
-            size={15}
-            className="kd-dir__folder"
-          />
-          <span className="kd-dir__name">{node.name}</span>
-        </button>
-        {collapsed
-          ? null
-          : node.children.map((child) => renderNode(child, depth + 1))}
-      </div>
-    );
-  };
 
   return (
     <div className="kd-tree">
@@ -133,8 +116,38 @@ export function TreePane({ onJump }: TreePaneProps) {
         <FilterMenu files={files} />
       </div>
 
-      <div className="kd-tree__body">
-        {nodes.map((n) => renderNode(n, 0))}
+      <div className="kd-tree__body" ref={bodyRef}>
+        <div
+          className="kd-tree__spacer"
+          style={{ height: virtualizer.getTotalSize() }}
+        >
+          {virtualizer.getVirtualItems().map((item) => {
+            const row = rows[item.index];
+            return (
+              <div
+                key={item.key}
+                className="kd-tree__slot"
+                style={{ transform: `translateY(${item.start}px)` }}
+              >
+                {row.kind === "file" ? (
+                  <FileRow
+                    file={row.file}
+                    name={row.name}
+                    depth={row.depth}
+                    active={row.file.path === current}
+                    onJump={onJump}
+                  />
+                ) : (
+                  <DirRow
+                    row={row}
+                    collapsed={collapsedDirs.has(row.node.path)}
+                    onToggle={toggleDir}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {generated.length > 0 ? (
           <div className="kd-tree__generated">
@@ -171,6 +184,34 @@ export function TreePane({ onJump }: TreePaneProps) {
         ) : null}
       </div>
     </div>
+  );
+}
+
+function DirRow({
+  row,
+  collapsed,
+  onToggle,
+}: {
+  row: Extract<TreeRow, { kind: "dir" }>;
+  collapsed: boolean;
+  onToggle: (path: string) => void;
+}) {
+  return (
+    <button
+      className="kd-dir"
+      style={{ paddingLeft: 8 + row.depth * 12 }}
+      onClick={() => onToggle(row.node.path)}
+      aria-expanded={!collapsed}
+      title={row.node.path}
+    >
+      <Icon name={collapsed ? "chevron_right" : "expand_more"} size={15} />
+      <Icon
+        name={collapsed ? "folder" : "folder_open"}
+        size={15}
+        className="kd-dir__folder"
+      />
+      <span className="kd-dir__name">{row.node.name}</span>
+    </button>
   );
 }
 
