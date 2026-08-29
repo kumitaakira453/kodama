@@ -1063,6 +1063,114 @@
   border-radius: 0 0 var(--kd-radius-sm) var(--kd-radius-sm);
 }
 
+/* ==========================================================================
+   更新の通知
+   ========================================================================== */
+
+.kd-update {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 45;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 340px;
+  padding: 14px;
+  border: 1px solid var(--kd-border-strong);
+  border-radius: var(--kd-radius-lg);
+  background: var(--kd-elevated);
+  box-shadow: 0 18px 44px rgb(0 0 0 / 0.24);
+  font-family: var(--kd-font-sans);
+  animation: kd-update-in var(--kd-dur-base) var(--kd-ease-out);
+}
+
+@keyframes kd-update-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.kd-update__mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--kd-radius-sm);
+  background: color-mix(in srgb, var(--kd-accent) 16%, transparent);
+  color: var(--kd-accent);
+}
+
+.kd-update__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kd-update__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.kd-update__sub {
+  margin: 2px 0 0;
+  color: var(--kd-muted);
+  font-size: 11px;
+}
+
+/* 変更点は長いことがある。畳んで、続きは Release で読ませる。 */
+.kd-update__note {
+  margin: 8px 0 0;
+  max-height: 4.8em;
+  overflow: hidden;
+  color: var(--kd-fg-dim);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.kd-update__error {
+  margin: 8px 0 0;
+  color: var(--kd-danger);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.kd-update__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.kd-update__progress {
+  margin-top: 12px;
+}
+
+.kd-update__bar {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--kd-hover);
+}
+
+.kd-update__fill {
+  display: block;
+  height: 100%;
+  background: var(--kd-accent);
+  transition: width var(--kd-dur-fast) var(--kd-ease-out);
+}
+
+.kd-update__pct {
+  display: block;
+  margin-top: 6px;
+  color: var(--kd-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- 画像の変更前後 ---- */
 
 .kd-imgpair {

@@ -1,4 +1,6 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useEffect, useState } from "react";
 
 import type { Project } from "../../lib/types";
 import {
@@ -11,6 +13,11 @@ import {
   viewModeAtom,
   type Theme,
 } from "../../state/atoms";
+import {
+  updateCheckNonceAtom,
+  updateStatusAtom,
+  type UpdateStatus,
+} from "../../state/updater";
 import { IconButton } from "../ui/Button";
 import { Dropdown } from "../ui/Dropdown";
 import { Icon } from "../ui/Icon";
@@ -30,6 +37,50 @@ const THEME_LABEL: Record<Theme, string> = {
   light: "テーマ: ライト",
   dark: "テーマ: ダーク",
 };
+
+/** 「更新を確認」の見え方。押した結果をその場に出す。 */
+const UPDATE_HINT: Record<UpdateStatus, string> = {
+  idle: "",
+  checking: "確認中…",
+  available: "更新あり",
+  uptodate: "最新です",
+  error: "確認できません",
+};
+
+/**
+ * 手動の更新確認。
+ *
+ * 起動時にも確認しているが、出たばかりの版をすぐ取りに行きたいことがある。
+ * 押すと合図を 1 つ進め、確認を走らせる。
+ */
+function UpdateCheckItem() {
+  const setNonce = useSetAtom(updateCheckNonceAtom);
+  const status = useAtomValue(updateStatusAtom);
+  const [version, setVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    void getVersion()
+      .then(setVersion)
+      .catch(() => setVersion(null));
+  }, []);
+
+  return (
+    <button
+      className="kd-menuitem"
+      disabled={status === "checking"}
+      onClick={() => setNonce((n) => n + 1)}
+    >
+      <Icon name="refresh" size={15} />
+      <span className="kd-menuitem__text">
+        更新を確認{version ? `（いま v${version}）` : ""}
+      </span>
+      {UPDATE_HINT[status] ? (
+        <span className="kd-menuitem__hint">{UPDATE_HINT[status]}</span>
+      ) : null}
+    </button>
+  );
+}
 
 interface TopBarProps {
   projects: Project[];
@@ -97,6 +148,7 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
               <Icon name="settings" size={15} />
               <span className="kd-menuitem__text">プロジェクトを管理…</span>
             </button>
+            <UpdateCheckItem />
           </>
         )}
       </Dropdown>
