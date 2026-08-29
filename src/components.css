@@ -175,12 +175,19 @@
   background: var(--kd-elevated);
 }
 
-/* アイコンだけの版。四角い当たり判定にそろえる。 */
+/* アイコンだけの版。隣のアイコンボタンと同じ地にそろえる。地色を持たせると
+   そこだけ白い箱として浮く。 */
 .kd-dd[data-icon-only] .kd-dd__button {
   justify-content: center;
   width: 30px;
   height: 30px;
   padding: 0;
+  color: var(--kd-fg-dim);
+}
+
+/* 絞り込みの欄に並ぶものだけは枠を持たせる。隣が入力欄なので、地の無い
+   アイコンだけだと押せるものに見えない。 */
+.kd-tree__bar .kd-dd[data-icon-only] .kd-dd__button {
   border-color: var(--kd-border);
   background: var(--kd-elevated);
 }

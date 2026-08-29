@@ -55,7 +55,6 @@ const UPDATE_HINT: Record<UpdateStatus, string> = {
  * 思って開かないので見つからない。アプリに属する操作はここに集める。
  */
 function AppMenu() {
-  const setSettingsOpen = useSetAtom(settingsOpenAtom);
   const setShortcutsOpen = useSetAtom(shortcutsOpenAtom);
   const setNonce = useSetAtom(updateCheckNonceAtom);
   const status = useAtomValue(updateStatusAtom);
@@ -90,18 +89,6 @@ function AppMenu() {
             ) : null}
           </button>
 
-          <div className="kd-menu__sep" />
-
-          <button
-            className="kd-menuitem"
-            onClick={() => {
-              setSettingsOpen(true);
-              close();
-            }}
-          >
-            <Icon name="settings" size={15} />
-            <span className="kd-menuitem__text">プロジェクトを管理…</span>
-          </button>
           <button
             className="kd-menuitem"
             onClick={() => {
