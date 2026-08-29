@@ -85,6 +85,7 @@ pub fn run() {
             commands::revision::list_revisions,
             commands::diff::load_diff,
             commands::diff::file_diff,
+            commands::diff::read_lines,
             commands::review::list_threads,
             commands::review::add_thread,
             commands::review::reply_thread,

@@ -1788,3 +1788,22 @@
   margin: 0;
   font-size: 12.5px;
 }
+
+/* ハンクの外を読むボタン。ハンクヘッダと同じ見た目にして列を揃える。 */
+.kd-row--expand {
+  grid-template-columns: calc(var(--kd-gutter) * 2 + var(--kd-sign-w)) minmax(0, 1fr);
+  align-items: center;
+  background: var(--kd-diff-hunk);
+  color: var(--kd-muted);
+  border-top: 1px solid var(--kd-border);
+  border-bottom: 1px solid var(--kd-border);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-row--expand:hover {
+  background: color-mix(in srgb, var(--kd-accent) 14%, var(--kd-diff-hunk));
+  color: var(--kd-accent);
+}

@@ -48,6 +48,15 @@ export const api = {
     context: number,
   ) => invoke<DiffFile | null>("file_diff", { worktree, spec, path, context }),
 
+  readLines: (
+    worktree: string,
+    spec: DiffSpec,
+    path: string,
+    side: "old" | "new",
+    from: number,
+    to: number,
+  ) => invoke<string[]>("read_lines", { worktree, spec, path, side, from, to }),
+
   installedApps: () => invoke<AppTarget[]>("installed_apps"),
   openInApp: (appId: string, path: string, line: number | null) =>
     invoke<void>("open_in_app", { appId, path, line }),

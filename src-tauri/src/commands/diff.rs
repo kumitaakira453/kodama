@@ -23,3 +23,16 @@ pub async fn file_diff(
 ) -> KdResult<Option<DiffFile>> {
     run_query(move || diffload::load_file(&worktree, &spec, &path, context)).await
 }
+
+/// ハンクの外の行を読む。展開ボタンが使う。
+#[tauri::command]
+pub async fn read_lines(
+    worktree: String,
+    spec: DiffSpec,
+    path: String,
+    side: crate::app::diffload::BlobSide,
+    from: u32,
+    to: u32,
+) -> KdResult<Vec<String>> {
+    run_query(move || diffload::read_lines(&worktree, &spec, &path, side, from, to)).await
+}

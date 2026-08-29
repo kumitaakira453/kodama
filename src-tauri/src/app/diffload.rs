@@ -236,3 +236,39 @@ fn apply_inline(hunk: &mut DiffHunk) {
 fn short(sha: &str) -> String {
     sha.chars().take(7).collect()
 }
+
+/// ハンクの外の行を読む。展開ボタンで前後の文脈を継ぎ足すために使う。
+///
+/// 行番号は 1 始まり・両端を含む。範囲外は黙って切り詰める。
+pub fn read_lines(
+    worktree: &str,
+    spec: &DiffSpec,
+    path: &str,
+    side: BlobSide,
+    from: u32,
+    to: u32,
+) -> KdResult<Vec<String>> {
+    let resolved = resolve(worktree, spec)?;
+    let blob = match side {
+        BlobSide::Old => &resolved.left,
+        BlobSide::New => &resolved.right,
+    };
+    let Some(text) = Git::new(worktree).read_blob(worktree, blob, path) else {
+        return Ok(Vec::new());
+    };
+    let start = from.max(1) as usize - 1;
+    Ok(text
+        .lines()
+        .skip(start)
+        .take((to.saturating_sub(from) + 1) as usize)
+        .map(str::to_string)
+        .collect())
+}
+
+/// どちら側の内容を読むか。
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum BlobSide {
+    Old,
+    New,
+}

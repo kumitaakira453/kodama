@@ -113,6 +113,16 @@ export const diffLoadingAtom = atom<boolean>(false);
 export const collapsedFilesAtom = atom<Set<string>>(new Set<string>());
 /** いま画面の上端に見えているファイル。左ツリーの強調に使う。 */
 export const currentFileAtom = atom<string | null>(null);
+/**
+ * 展開したハンクの外の行。キーは `<path>::g<ハンク番号>`。
+ * 値は展開して得た行の本文（先頭行の行番号つき）。
+ */
+export interface Expanded {
+  from: number;
+  lines: string[];
+}
+export const expandedAtom = atom<Record<string, Expanded>>({});
+
 /** 左ツリーの絞り込み。 */
 export const fileFilterAtom = atom<string>("");
 

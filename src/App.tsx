@@ -21,6 +21,7 @@ import { useViewed } from "./hooks/useViewed";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { useWatch } from "./hooks/useWatch";
 import { ShortcutsModal } from "./components/ui/ShortcutsModal";
+import { UpdateBanner } from "./components/ui/UpdateBanner";
 import { useTheme } from "./hooks/useTheme";
 import { useToast } from "./hooks/useToast";
 import {
@@ -193,6 +194,7 @@ export default function App() {
       {shortcutsOpen ? (
         <ShortcutsModal onClose={() => setShortcutsOpen(false)} />
       ) : null}
+      <UpdateBanner />
       <Toasts />
     </div>
   );

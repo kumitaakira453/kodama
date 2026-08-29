@@ -1,4 +1,4 @@
-import type { LineSelection } from "../../state/atoms";
+import type { Expanded, LineSelection } from "../../state/atoms";
 import type {
   DiffFile,
   DiffHunk,
@@ -28,6 +28,15 @@ export type RowItem =
       context: string;
     }
   | { type: "notice"; key: string; file: DiffFile; text: string }
+  | {
+      type: "expander";
+      key: string;
+      file: DiffFile;
+      /** 展開の対象になる旧側の行範囲。 */
+      from: number;
+      to: number;
+      gapKey: string;
+    }
   | { type: "thread"; key: string; file: DiffFile; view: ThreadView }
   | { type: "composer"; key: string; file: DiffFile; selection: LineSelection }
   | { type: "file-gap"; key: string };
@@ -39,6 +48,7 @@ export const ROW_HEIGHT = {
   line: 24,
   split: 24,
   notice: 56,
+  expander: 24,
   // 可変。実測で置き換わるまでの見積もり。
   thread: 120,
   composer: 148,
@@ -55,6 +65,7 @@ export function buildRows(
   collapsed: Set<string>,
   threads: ThreadView[] = [],
   selection: LineSelection | null = null,
+  expanded: Record<string, Expanded> = {},
 ): RowItem[] {
   const rows: RowItem[] = [];
   const byFile = groupThreads(threads);
@@ -84,6 +95,7 @@ export function buildRows(
           mode,
           byFile.get(file.path) ?? [],
           selection?.file === file.path ? selection : null,
+          expanded,
         );
       }
     }
@@ -110,6 +122,7 @@ function appendHunks(
   mode: ViewMode,
   threads: ThreadView[],
   selection: LineSelection | null,
+  expanded: Record<string, Expanded>,
 ): void {
   /** 対象行の直後にスレッドと入力欄を差し込む。行との対応が視覚的に保たれる。 */
   const attach = (side: Side, lineNo: number | null) => {
@@ -135,6 +148,44 @@ function appendHunks(
   };
 
   file.hunks.forEach((hunk, hi) => {
+    // ハンクの手前に読めていない行があれば、展開できることを示す。
+    const prev = file.hunks[hi - 1];
+    const gapFrom = prev ? prev.oldStart + prev.oldLines : 1;
+    const gapTo = hunk.oldStart - 1;
+    const gapKey = `${file.path}::g${hi}`;
+    if (gapTo >= gapFrom) {
+      const got = expanded[gapKey];
+      if (got) {
+        got.lines.forEach((text, i) => {
+          const oldNo = got.from + i;
+          rows.push({
+            type: "line",
+            key: `${gapKey}x${i}`,
+            file,
+            context: hunk.header,
+            line: {
+              kind: "context",
+              oldNumber: oldNo,
+              newNumber: oldNo + (hunk.newStart - hunk.oldStart),
+              content: text,
+              noNewline: false,
+              inline: null,
+              tokens: null,
+            },
+          });
+        });
+      } else {
+        rows.push({
+          type: "expander",
+          key: `${gapKey}::btn`,
+          file,
+          from: gapFrom,
+          to: gapTo,
+          gapKey,
+        });
+      }
+    }
+
     rows.push({
       type: "hunk",
       key: `${file.path}::h${hi}`,

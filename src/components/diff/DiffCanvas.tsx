@@ -3,6 +3,8 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useHighlight } from "../../hooks/useHighlight";
+import { useToast } from "../../hooks/useToast";
+import { api } from "../../lib/ipc";
 import {
   buildRows,
   fileHeaderIndex,
@@ -24,6 +26,7 @@ import {
   currentFileAtom,
   diffAtom,
   diffLoadingAtom,
+  expandedAtom,
   jumpRequestAtom,
   lineSelectionAtom,
   selectedWorktreeAtom,
@@ -48,6 +51,9 @@ interface DiffCanvasProps {
   onDropThread: (id: string) => void;
   onOpenApp: (appId: string, path: string, line: number | null) => void;
 }
+
+/** 一度に展開する行数の上限。隙間が広いときは直前の分だけ出す。 */
+const MAX_EXPAND = 200;
 
 /** 行番号をクリックしたときに親へ渡す情報。 */
 interface GutterHit {
@@ -84,13 +90,15 @@ export function DiffCanvas({
   const [collapsed, setCollapsed] = useAtom(collapsedFilesAtom);
   const [jump, setJump] = useAtom(jumpRequestAtom);
   const [selection, setSelection] = useAtom(lineSelectionAtom);
+  const [expanded, setExpanded] = useAtom(expandedAtom);
   const setCurrentFile = useSetAtom(currentFileAtom);
+  const { showError } = useToast();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const files = useMemo(() => diff?.files ?? [], [diff]);
   const rows = useMemo(
-    () => buildRows(files, mode, collapsed, threads, selection),
-    [files, mode, collapsed, threads, selection],
+    () => buildRows(files, mode, collapsed, threads, selection, expanded),
+    [files, mode, collapsed, threads, selection, expanded],
   );
   const headerIndex = useMemo(() => fileHeaderIndex(rows), [rows]);
   const digits = useMemo(() => maxLineDigits(files), [files]);
@@ -144,6 +152,21 @@ export function DiffCanvas({
       });
     },
     [setSelection],
+  );
+
+  /** ハンクの手前を展開する。広すぎる隙間は直前の分だけに絞る。 */
+  const expandGap = useCallback(
+    (gapKey: string, path: string, from: number, to: number) => {
+      if (!worktree || !diff) return;
+      const start = Math.max(from, to - MAX_EXPAND + 1);
+      void api
+        .readLines(worktree, diff.resolved.spec, path, "old", start, to)
+        .then((lines) =>
+          setExpanded((prev) => ({ ...prev, [gapKey]: { from: start, lines } })),
+        )
+        .catch(showError);
+    },
+    [worktree, diff, setExpanded, showError],
   );
 
   const submitThread = useCallback(
@@ -304,6 +327,7 @@ export function DiffCanvas({
                 apps={apps}
                 onOpenApp={onOpenApp}
                 onGutter={onGutter}
+                onExpand={expandGap}
                 onSubmit={submitThread}
                 onCancel={() => setSelection(null)}
                 onReply={onReply}
@@ -328,6 +352,7 @@ interface RowProps {
   apps: AppTarget[];
   onOpenApp: (appId: string, path: string, line: number | null) => void;
   onGutter: (hit: GutterHit) => void;
+  onExpand: (gapKey: string, path: string, from: number, to: number) => void;
   onSubmit: (body: string) => void;
   onCancel: () => void;
   onReply: (id: string, body: string) => void;
@@ -345,6 +370,7 @@ function Row({
   apps,
   onOpenApp,
   onGutter,
+  onExpand,
   onSubmit,
   onCancel,
   onReply,
@@ -370,6 +396,24 @@ function Row({
 
     case "notice":
       return <div className="kd-notice">{row.text}</div>;
+
+    case "expander":
+      return (
+        <button
+          className="kd-row kd-row--expand"
+          onClick={() =>
+            onExpand(row.gapKey, row.file.path, row.from, row.to)
+          }
+          title={`${row.from}-${row.to} 行目を表示する`}
+        >
+          <span className="kd-row__expand" aria-hidden>
+            <span className="material-symbols-rounded">unfold_more</span>
+          </span>
+          <span className="kd-hunk__text">
+            {row.to - row.from + 1} 行を表示
+          </span>
+        </button>
+      );
 
     case "thread":
       return (
