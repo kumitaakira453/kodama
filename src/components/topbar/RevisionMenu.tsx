@@ -8,6 +8,7 @@ import {
   explainSelection,
   isInSelection,
   resolveRange,
+  stepRange,
   type CommitSelection,
   type PseudoId,
 } from "../../lib/revisions";
@@ -94,27 +95,8 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
   const togglePseudo = (id: PseudoId) =>
     setDraft(isExactly(id) ? null : { kind: "pseudo", id });
 
-  /**
-   * コミットのチェック。範囲は常に連続に保つ。
-   *
-   * 外側を押せばそこまで広がり、内側を押せばその行を外すために外側を落とす。
-   * 起点だけを覚えて押した行を終点にする方式だと、3 件目を押したときに
-   * 2 件目までの範囲が黙って捨てられる。
-   */
   const toggleCommit = (sha: string) =>
-    setDraft((prev) => {
-      const i = commits.findIndex((c) => c.sha === sha);
-      if (i < 0) return prev;
-      const span = currentSpan(prev, commits);
-      if (!span) return spanOf(commits, i, i);
-      const [top, bottom] = span;
-      if (i < top) return spanOf(commits, i, bottom);
-      if (i > bottom) return spanOf(commits, top, i);
-      if (top === bottom) return null;
-      return i - top <= bottom - i
-        ? spanOf(commits, i + 1, bottom)
-        : spanOf(commits, top, i - 1);
-    });
+    setDraft((prev) => stepRange(prev, commits, sha));
 
   return (
     <Modal
@@ -319,37 +301,6 @@ function CommitRow({
       </button>
     </div>
   );
-}
-
-/** いま選ばれているコミットの範囲を一覧の添字で返す。新しい側が小さい。 */
-function currentSpan(
-  selection: CommitSelection | null,
-  commits: CommitInfo[],
-): [number, number] | null {
-  if (!selection) return null;
-  if (selection.kind === "pseudo") {
-    // ブランチ全体を選んだ状態からは、一覧すべてを範囲とみなして絞り込む。
-    return covers(selection, "branch") && commits.length > 0
-      ? [0, commits.length - 1]
-      : null;
-  }
-  const range = resolveRange(selection, commits);
-  if (!range) return null;
-  return [
-    commits.findIndex((c) => c.sha === range.newest.sha),
-    commits.findIndex((c) => c.sha === range.oldest.sha),
-  ];
-}
-
-function spanOf(
-  commits: CommitInfo[],
-  top: number,
-  bottom: number,
-): CommitSelection | null {
-  const newest = commits[top];
-  const oldest = commits[bottom];
-  if (!newest || !oldest) return null;
-  return { kind: "commits", anchor: newest.sha, focus: oldest.sha };
 }
 
 function initialTab(selection: CommitSelection): Tab {

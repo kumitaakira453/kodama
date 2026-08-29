@@ -139,6 +139,63 @@ export function isInSelection(
 }
 
 /**
+ * コミットのチェックを 1 つ押したときの、次の選択。外すと null になる。
+ *
+ * 範囲は常に連続に保つ。git に「飛び飛びの n 件の合成差分」に当たる表現が無く、
+ * 各コミットのパッチを繋いでも同じファイルの重なるハンクで破綻する。
+ *
+ * 範囲を組み立てていない状態から押したときは、その 1 件だけを選ぶ。
+ * 「すべてのコミット」で全部にチェックが付いた状態を範囲とみなして縮めると、
+ * 2 件選ぶつもりの操作が縮小として働き、複数選べないように見える。
+ */
+export function stepRange(
+  selection: CommitSelection | null,
+  commits: CommitInfo[],
+  sha: string,
+): CommitSelection | null {
+  const i = commits.findIndex((c) => c.sha === sha);
+  if (i < 0) return selection;
+
+  const span = selection ? indexSpan(selection, commits) : null;
+  if (!span) return spanSelection(commits, i, i);
+
+  // 一覧は新しい順なので、添字が小さいほど新しい。
+  const [top, bottom] = span;
+  if (i < top) return spanSelection(commits, i, bottom);
+  if (i > bottom) return spanSelection(commits, top, i);
+  // 範囲の中を押すのは、その行を外すということ。連続を保つため、
+  // 近い側の端をその手前まで下げる。
+  if (top === bottom) return null;
+  return i - top <= bottom - i
+    ? spanSelection(commits, i + 1, bottom)
+    : spanSelection(commits, top, i - 1);
+}
+
+/** 選択中のコミット範囲を一覧の添字で返す。範囲を組んでいなければ null。 */
+function indexSpan(
+  selection: CommitSelection,
+  commits: CommitInfo[],
+): [number, number] | null {
+  const range = resolveRange(selection, commits);
+  if (!range) return null;
+  return [
+    commits.findIndex((c) => c.sha === range.newest.sha),
+    commits.findIndex((c) => c.sha === range.oldest.sha),
+  ];
+}
+
+function spanSelection(
+  commits: CommitInfo[],
+  top: number,
+  bottom: number,
+): CommitSelection | null {
+  const newest = commits[top];
+  const oldest = commits[bottom];
+  if (!newest || !oldest) return null;
+  return { kind: "commits", anchor: newest.sha, focus: oldest.sha };
+}
+
+/**
  * 選択内容を短く言い表す。上部バーのボタンに出す。
  *
  * sha は並べても見分けが付かないので、1 件ならコミットの題名を出す。
