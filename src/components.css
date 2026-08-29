@@ -832,6 +832,12 @@
   font-variant-ligatures: none;
   font-feature-settings: "calt" 0, "liga" 0;
 
+  /* 行番号の幅はここで決める。`--kd-digits` を差し込むのがこの要素なので、
+     :root に置くと 3 桁のまま固まり、桁が増えたときに番号が折り返す。
+     カスタムプロパティの var() は宣言した要素で解決される。
+     最低 50px は GitHub と同値。 */
+  --kd-gutter: max(50px, calc(var(--kd-digits) * 1ch + 20px));
+
   --kd-cols-unified: var(--kd-gutter) var(--kd-gutter) var(--kd-sign-w)
     minmax(0, 1fr);
   --kd-cols-split: var(--kd-gutter) var(--kd-sign-w) minmax(0, 1fr)
@@ -1087,6 +1093,9 @@
   /* 折り返した行では番号を先頭行の高さに揃える。中央に置くと本文とずれる。 */
   align-items: flex-start;
   justify-content: flex-end;
+  /* 本文の折り返し指定を受け継がせない。番号が途中で割れると桁が読めなくなる。 */
+  white-space: nowrap;
+  overflow-wrap: normal;
   line-height: var(--kd-line-h);
   color: var(--kd-muted);
   font-size: 11px;

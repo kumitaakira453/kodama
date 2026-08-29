@@ -176,8 +176,6 @@
   --kd-file-gap-h: 16px;
   --kd-sign-w: 22px;
   --kd-digits: 3;
-  /* 行番号は最低でも 50px。桁が増えても幅が跳ねない（GitHub と同値）。 */
-  --kd-gutter: max(50px, calc(var(--kd-digits) * 1ch + 20px));
   --kd-code-pad: 16px;
 
   --kd-titlebar-pad: 30px;
