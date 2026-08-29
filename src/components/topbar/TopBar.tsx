@@ -8,6 +8,7 @@ import {
   selectedProjectIdAtom,
   selectedWorktreeAtom,
   settingsOpenAtom,
+  shortcutsOpenAtom,
   sidebarOpenAtom,
   themeAtom,
   viewModeAtom,
@@ -48,12 +49,14 @@ const UPDATE_HINT: Record<UpdateStatus, string> = {
 };
 
 /**
- * 手動の更新確認。
+ * アプリ自体の操作をまとめたメニュー。
  *
- * 起動時にも確認しているが、出たばかりの版をすぐ取りに行きたいことがある。
- * 押すと合図を 1 つ進め、確認を走らせる。
+ * 更新の確認をプロジェクトの一覧の中に入れると、プロジェクトを選ぶ場所だと
+ * 思って開かないので見つからない。アプリに属する操作はここに集める。
  */
-function UpdateCheckItem() {
+function AppMenu() {
+  const setSettingsOpen = useSetAtom(settingsOpenAtom);
+  const setShortcutsOpen = useSetAtom(shortcutsOpenAtom);
   const setNonce = useSetAtom(updateCheckNonceAtom);
   const status = useAtomValue(updateStatusAtom);
   const [version, setVersion] = useState<string | null>(null);
@@ -66,19 +69,53 @@ function UpdateCheckItem() {
   }, []);
 
   return (
-    <button
-      className="kd-menuitem"
-      disabled={status === "checking"}
-      onClick={() => setNonce((n) => n + 1)}
-    >
-      <Icon name="refresh" size={15} />
-      <span className="kd-menuitem__text">
-        更新を確認{version ? `（いま v${version}）` : ""}
-      </span>
-      {UPDATE_HINT[status] ? (
-        <span className="kd-menuitem__hint">{UPDATE_HINT[status]}</span>
-      ) : null}
-    </button>
+    <Dropdown icon="more_horiz" label="メニュー" title="メニュー" width={260} iconOnly>
+      {(close) => (
+        <>
+          <p className="kd-menu__head">
+            kodama{version ? ` v${version}` : ""}
+          </p>
+
+          {/* 起動時にも確認しているが、出たばかりの版をすぐ取りに行きたい
+              ことがある。押すと合図を 1 つ進め、確認を走らせる。 */}
+          <button
+            className="kd-menuitem"
+            disabled={status === "checking"}
+            onClick={() => setNonce((n) => n + 1)}
+          >
+            <Icon name="system_update_alt" size={15} />
+            <span className="kd-menuitem__text">更新を確認</span>
+            {UPDATE_HINT[status] ? (
+              <span className="kd-menuitem__hint">{UPDATE_HINT[status]}</span>
+            ) : null}
+          </button>
+
+          <div className="kd-menu__sep" />
+
+          <button
+            className="kd-menuitem"
+            onClick={() => {
+              setSettingsOpen(true);
+              close();
+            }}
+          >
+            <Icon name="settings" size={15} />
+            <span className="kd-menuitem__text">プロジェクトを管理…</span>
+          </button>
+          <button
+            className="kd-menuitem"
+            onClick={() => {
+              setShortcutsOpen(true);
+              close();
+            }}
+          >
+            <Icon name="keyboard" size={15} />
+            <span className="kd-menuitem__text">キーボード操作</span>
+            <span className="kd-menuitem__hint">?</span>
+          </button>
+        </>
+      )}
+    </Dropdown>
   );
 }
 
@@ -148,7 +185,6 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
               <Icon name="settings" size={15} />
               <span className="kd-menuitem__text">プロジェクトを管理…</span>
             </button>
-            <UpdateCheckItem />
           </>
         )}
       </Dropdown>
@@ -204,6 +240,8 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
         label={THEME_LABEL[theme]}
         onClick={() => setTheme(NEXT_THEME[theme])}
       />
+
+      <AppMenu />
     </header>
   );
 }
