@@ -184,9 +184,6 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
                     draft ? isInSelection(c.sha, draft, commits) : false
                   }
                   onToggle={() => toggleCommit(c.sha)}
-                  onSelectOnly={() =>
-                    setDraft({ kind: "commits", anchor: c.sha, focus: c.sha })
-                  }
                 />
               ))}
               {commits.length === 0 ? (
@@ -197,8 +194,8 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
             </div>
 
             <p className="kd-revmenu__hint">
-              チェックを付けたところまで範囲が伸びます。行のクリックで 1 件だけ
-              選べます。
+              2 つ目を押すと、そのあいだのコミットも入ります。範囲の外を押せば
+              広がり、中を押せばその行が外れます。
             </p>
           </>
         ) : (
@@ -265,16 +262,20 @@ function PickRow({
   );
 }
 
+/**
+ * コミット 1 行。行のどこを押しても同じ挙動にする。
+ *
+ * 小さなチェックボックスだけを範囲の操作にし、広い本体を「1 件だけ選ぶ」に
+ * していると、押しやすいほうが毎回選択を 1 件に潰すので複数選べなくなる。
+ */
 function CommitRow({
   commit,
   selected,
   onToggle,
-  onSelectOnly,
 }: {
   commit: CommitInfo;
   selected: boolean;
   onToggle: () => void;
-  onSelectOnly: () => void;
 }) {
   return (
     <div className="kd-revrow" data-selected={selected || undefined}>
@@ -288,7 +289,7 @@ function CommitRow({
       </label>
       <button
         className="kd-revrow__body"
-        onClick={onSelectOnly}
+        onClick={onToggle}
         title={`${commit.sha}\n${commit.author}\n${commit.subject}`}
       >
         <span className="kd-revrow__line">
