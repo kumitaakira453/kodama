@@ -40,7 +40,9 @@ export function FileHeader({
         {file.oldPath ? (
           <>
             <span className="kd-fhead__old">{file.oldPath}</span>
-            <Icon name="arrow_right_alt" size={14} />
+            <span className="kd-fhead__arrow">
+              <Icon name="arrow_right_alt" size={14} />
+            </span>
           </>
         ) : null}
         <PathLabel path={file.path} />
@@ -62,6 +64,8 @@ export function FileHeader({
           変更あり
         </span>
       ) : null}
+
+      <span className="kd-fhead__spring" />
 
       <label className="kd-fhead__viewed" title="読み終えたら印を付ける (v)">
         <input
@@ -101,7 +105,10 @@ function PathLabel({ path }: { path: string }) {
   if (cut < 0) return <span className="kd-fhead__name">{path}</span>;
   return (
     <>
-      <span className="kd-fhead__dir">{path.slice(0, cut + 1)}</span>
+      {/* 区切りの "/" をディレクトリの外に出す。中に含めると、左を省略するための
+          direction: rtl で行末の中立文字として扱われ、先頭へ回り込む。 */}
+      <span className="kd-fhead__dir">{path.slice(0, cut)}</span>
+      <span className="kd-fhead__slash">/</span>
       <span className="kd-fhead__name">{path.slice(cut + 1)}</span>
     </>
   );

@@ -238,21 +238,34 @@ export function DiffCanvas({
   }, [items, rows]);
   useHighlight(visiblePaths);
 
-  // 上端に見えているファイル。仮想化した行に sticky は効かないので、
-  // 見出しは別レイヤーで重ねる。
-  const pinnedFile = useMemo(() => {
-    const first = items[0]?.index ?? 0;
-    for (let i = first; i >= 0; i--) {
+  const scrollOffset = virtualizer.scrollOffset ?? 0;
+
+  // 上端に見えているファイル。overscan の行は視界の外にあるので、
+  // 描画済みの先頭ではなく上端と重なる行から遡る。
+  const topFile = useMemo(() => {
+    const top = items.find((item) => item.end > scrollOffset) ?? items[0];
+    if (!top) return null;
+    for (let i = top.index; i >= 0; i--) {
       const row = rows[i];
       if (row?.type === "file-header") return row.file;
       if (row?.type === "file-gap") return null;
     }
     return null;
-  }, [items, rows]);
+  }, [items, rows, scrollOffset]);
 
   useEffect(() => {
-    setCurrentFile(pinnedFile?.path ?? null);
-  }, [pinnedFile, setCurrentFile]);
+    setCurrentFile(topFile?.path ?? null);
+  }, [topFile, setCurrentFile]);
+
+  // 見出しが本来の位置のまま見えているなら重ねない。重ねた分だけ下の行が
+  // 隠れるので、隠す必要が無いときは出さない。
+  const pinnedFile = useMemo(() => {
+    if (!topFile) return null;
+    const index = headerIndex.get(topFile.path);
+    if (index === undefined) return null;
+    const header = items.find((item) => item.index === index);
+    return header && header.start >= scrollOffset ? null : topFile;
+  }, [topFile, headerIndex, items, scrollOffset]);
 
   if (loading && !diff) {
     return (
@@ -284,27 +297,27 @@ export function DiffCanvas({
 
   return (
     <div className="kd-canvas">
-      {pinnedFile ? (
-        <div className="kd-canvas__pin">
-          <FileHeader
-            file={pinnedFile}
-            collapsed={collapsed.has(pinnedFile.path)}
-            viewed={viewed[pinnedFile.path] ?? "unviewed"}
-            onToggle={() => toggleFile(pinnedFile.path)}
-            onToggleViewed={onToggleViewed}
-            apps={apps}
-            onOpen={onOpenApp}
-            pinned
-          />
-        </div>
-      ) : null}
-
       <div
         ref={scrollRef}
         className="kd-canvas__scroll"
         data-mode={mode}
         style={{ "--kd-digits": String(digits) } as React.CSSProperties}
       >
+        {pinnedFile ? (
+          <div className="kd-canvas__pin">
+            <FileHeader
+              file={pinnedFile}
+              collapsed={collapsed.has(pinnedFile.path)}
+              viewed={viewed[pinnedFile.path] ?? "unviewed"}
+              onToggle={() => toggleFile(pinnedFile.path)}
+              onToggleViewed={onToggleViewed}
+              apps={apps}
+              onOpen={onOpenApp}
+              pinned
+            />
+          </div>
+        ) : null}
+
         <div
           className="kd-canvas__spacer"
           style={{ height: virtualizer.getTotalSize() }}

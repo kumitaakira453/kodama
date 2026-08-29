@@ -577,14 +577,15 @@
   opacity: 0.8;
 }
 
-/* 仮想化した行に sticky は効かないので、見出しは別レイヤーで重ねる。 */
+/* 仮想化した行に sticky は効かないので、見出しは別レイヤーで重ねる。
+   置き場所はスクロール要素の直下にする。canvas に対する絶対配置だと、
+   スクロールバーの幅と左右の余白が本体の行とずれる。
+   高さ 0 にして本体を押し下げない。 */
 .kd-canvas__pin {
-  position: absolute;
+  position: sticky;
   top: 0;
-  left: 16px;
-  right: 16px;
   z-index: 3;
-  pointer-events: auto;
+  height: 0;
 }
 
 /* スクロールを持つのはここ。横も縦もこの 1 つで受ける。 */
@@ -640,8 +641,11 @@
   font-size: 12.5px;
 }
 
+/* 重ねて出すときは角を丸めない。丸めると角の外側が透けて、下を流れる行が覗く。
+   このヘッダは本来の見出しが上へ流れ去ったときにだけ出るので、上端に密着した
+   四角のままで矛盾しない。 */
 .kd-fhead[data-pinned] {
-  border-radius: var(--kd-radius-sm) var(--kd-radius-sm) 0 0;
+  border-radius: 0;
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
 }
 
@@ -666,27 +670,32 @@
   color: var(--kd-fg);
 }
 
+/* パスは左詰め。ここを direction: rtl にすると、フレックスの主軸ごと反転して
+   ディレクトリとファイル名が入れ替わり、行全体が右に寄る。省略の向きは
+   ディレクトリ単体で決める。 */
 .kd-fhead__path {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
   overflow: hidden;
   white-space: nowrap;
   font-family: var(--kd-font-mono);
   font-size: 12px;
-  direction: rtl; /* 長いパスは先頭を省略して末尾を残す */
-  text-align: left;
 }
 
-.kd-fhead__path > * {
-  direction: ltr;
-}
-
+/* 縮むのはディレクトリだけ。ファイル名は幅が足りなくても最後まで見せる。 */
 .kd-fhead__dir {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--kd-muted);
+  /* 省略記号を左に出し、パスの末尾側を残す。 */
+  direction: rtl;
+}
+
+.kd-fhead__slash {
+  flex: 0 0 auto;
   color: var(--kd-muted);
 }
 
@@ -696,8 +705,25 @@
 }
 
 .kd-fhead__old {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--kd-muted);
   text-decoration: line-through;
+}
+
+.kd-fhead__arrow {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin: 0 4px;
+  color: var(--kd-muted);
+}
+
+/* 左の見出しと右の操作を引き離す。 */
+.kd-fhead__spring {
+  flex: 1 1 auto;
+  min-width: 8px;
 }
 
 .kd-fhead__stat {

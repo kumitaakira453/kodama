@@ -1,4 +1,5 @@
 import { useAtom, useAtomValue } from "jotai";
+import { useMemo } from "react";
 
 import { useCurrentWorktrees } from "../../hooks/useProjects";
 import type { PrInfo, WorktreeInfo, WorktreeStatus } from "../../lib/types";
@@ -26,6 +27,10 @@ export function WorktreeMenu() {
   const prs = useAtomValue(pullRequestsAtom);
   const [selected, setSelected] = useAtom(selectedWorktreeAtom);
 
+  const ordered = useMemo(
+    () => sortWorktrees(worktrees, statuses),
+    [worktrees, statuses],
+  );
   const current = worktrees.find((w) => w.path === selected);
   const label = current
     ? (current.branch ?? current.head ?? current.name)
@@ -35,7 +40,7 @@ export function WorktreeMenu() {
     <Dropdown icon="polyline" label={label} width={480} title="worktree を選ぶ">
       {(close) => (
         <div className="kd-wtmenu">
-          {worktrees.map((w) => (
+          {ordered.map((w) => (
             <WorktreeRow
               key={w.path}
               worktree={w}
@@ -55,6 +60,26 @@ export function WorktreeMenu() {
       )}
     </Dropdown>
   );
+}
+
+/**
+ * メインを先頭に固定し、残りは最終コミットの新しい順に並べる。
+ *
+ * 作業中の worktree ほど新しいコミットを持つので、直近に触ったものが上に来る。
+ * メインは基準として常に同じ位置にあってほしいので、この並びから外す。
+ * 状態は後追いで届くため、まだ来ていないものは末尾に置いて順序を安定させる。
+ */
+function sortWorktrees(
+  worktrees: WorktreeInfo[],
+  statuses: Record<string, WorktreeStatus>,
+): WorktreeInfo[] {
+  const committedAt = (w: WorktreeInfo) =>
+    statuses[w.path]?.lastCommit?.timestamp ?? -1;
+  return [...worktrees].sort((a, b) => {
+    if (a.isMain !== b.isMain) return a.isMain ? -1 : 1;
+    const diff = committedAt(b) - committedAt(a);
+    return diff !== 0 ? diff : a.path.localeCompare(b.path);
+  });
 }
 
 function WorktreeRow({
