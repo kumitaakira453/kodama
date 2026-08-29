@@ -2,6 +2,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
 import { api } from "../lib/ipc";
+import type { DiffFile } from "../lib/types";
 import {
   contextLinesAtom,
   diffAtom,
@@ -10,6 +11,14 @@ import {
 
 /** 同時に走らせる取得の本数。増やしても git と syntect の待ちで頭打ちになる。 */
 const MAX_INFLIGHT = 2;
+
+/**
+ * 届いた色をまとめて反映するまでの待ち。
+ *
+ * 1 ファイルごとに反映すると、そのたびに全ファイルの行を組み直すことになる。
+ * 変更が多い比較では 1 回が重く、スクロール中に何十回も走って画面が固まる。
+ */
+const FLUSH_MS = 120;
 
 /**
  * 画面に入ったファイルから順に構文ハイライトを取りに行く。
@@ -27,16 +36,41 @@ export function useHighlight(visiblePaths: string[]) {
   const handled = useRef(new Set<string>());
   const queue = useRef<string[]>([]);
   const inflight = useRef(0);
+  /** 反映待ちの結果。まとめて 1 回で差し込む。 */
+  const pending = useRef(new Map<string, DiffFile>());
+  const timer = useRef(0);
+
   const revisionKey = diff?.resolved.revisionKey ?? null;
+
+  // 取得に要る値は ref から読む。diff そのものを依存に入れると、色が 1 つ
+  // 届くたびに取得処理を作り直すことになる。
+  const source = useRef({ worktree, context, revisionKey, spec: diff?.resolved.spec });
+  source.current = { worktree, context, revisionKey, spec: diff?.resolved.spec };
 
   useEffect(() => {
     handled.current = new Set();
     queue.current = [];
+    pending.current = new Map();
+    window.clearTimeout(timer.current);
+    timer.current = 0;
   }, [revisionKey, context]);
 
+  const flush = useCallback(() => {
+    timer.current = 0;
+    const batch = pending.current;
+    if (batch.size === 0) return;
+    pending.current = new Map();
+    const key = source.current.revisionKey;
+    setDiff((prev) =>
+      prev && prev.resolved.revisionKey === key
+        ? { ...prev, files: prev.files.map((f) => batch.get(f.path) ?? f) }
+        : prev,
+    );
+  }, [setDiff]);
+
   const pump = useCallback(() => {
-    if (!worktree || !diff) return;
-    const spec = diff.resolved.spec;
+    const { worktree: dir, context: ctx, spec } = source.current;
+    if (!dir || !spec) return;
 
     while (inflight.current < MAX_INFLIGHT) {
       const path = queue.current.shift();
@@ -44,18 +78,13 @@ export function useHighlight(visiblePaths: string[]) {
       inflight.current += 1;
 
       api
-        .fileDiff(worktree, spec, path, context)
+        .fileDiff(dir, spec, path, ctx)
         .then((file) => {
           if (!file) return;
-          // 取得中に比較対象が変わっていたら捨てる。
-          setDiff((prev) =>
-            prev && prev.resolved.revisionKey === revisionKey
-              ? {
-                  ...prev,
-                  files: prev.files.map((f) => (f.path === path ? file : f)),
-                }
-              : prev,
-          );
+          pending.current.set(path, file);
+          if (timer.current === 0) {
+            timer.current = window.setTimeout(flush, FLUSH_MS);
+          }
         })
         .catch(() => {
           // 色が付かないだけで差分は読める。次の機会に取り直せるよう印を外す。
@@ -66,7 +95,7 @@ export function useHighlight(visiblePaths: string[]) {
           pump();
         });
     }
-  }, [worktree, diff, context, revisionKey, setDiff]);
+  }, [flush]);
 
   useEffect(() => {
     if (!diff) return;
@@ -85,4 +114,6 @@ export function useHighlight(visiblePaths: string[]) {
     }
     if (added) pump();
   }, [visiblePaths, diff, pump]);
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
 }

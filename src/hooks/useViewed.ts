@@ -33,11 +33,25 @@ export function useViewed() {
   const generation = useRef(0);
 
   const revisionKey = diff?.resolved.revisionKey ?? null;
+  /**
+   * 中身が同じなら同じ参照を返す。
+   *
+   * 構文ハイライトが届くたびに diff の実体は入れ替わるが、ここで見たい
+   * ハッシュは変わらない。参照が変わっただけで読み直すと、スクロール中に
+   * 何十回も往復することになる。
+   */
+  const hashKey = useMemo(
+    () => (diff?.files ?? []).map((f) => `${f.path}\t${f.diffHash}`).join("\n"),
+    [diff],
+  );
   const hashes = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const f of diff?.files ?? []) map[f.path] = f.diffHash;
+    for (const line of hashKey ? hashKey.split("\n") : []) {
+      const tab = line.indexOf("\t");
+      if (tab > 0) map[line.slice(0, tab)] = line.slice(tab + 1);
+    }
     return map;
-  }, [diff]);
+  }, [hashKey]);
 
   useEffect(() => {
     const gen = ++generation.current;

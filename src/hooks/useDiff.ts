@@ -74,6 +74,25 @@ export function useDiff() {
   return { reload };
 }
 
+/**
+ * 既定で開いておく行数の上限。
+ *
+ * 900 ファイル・数万行の比較で全部を開くと、行の組み立てだけで画面が固まる。
+ * 上から順に開けるところまで開き、残りは畳んだ見出しで出す。読みたいものは
+ * 押せば開くし、左のツリーには全部並ぶ。
+ */
+const OPEN_LINE_BUDGET = 4000;
+
 function collapsedByDefault(files: DiffFile[]): Set<string> {
-  return new Set(files.filter((f) => f.generated).map((f) => f.path));
+  const collapsed = new Set<string>();
+  let budget = OPEN_LINE_BUDGET;
+  for (const file of files) {
+    // 生成ファイルは中身を読まないので、量に関わらず畳む。
+    if (file.generated || budget <= 0) {
+      collapsed.add(file.path);
+      continue;
+    }
+    budget -= file.hunks.reduce((n, h) => n + h.lines.length, 0);
+  }
+  return collapsed;
 }
