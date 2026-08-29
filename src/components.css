@@ -83,26 +83,22 @@
   flex: 1 1 auto;
 }
 
-/* 二者択一のセグメント。選ばれている側だけが浮き上がる。 */
+/* 二者択一。隣のアイコンボタンと同じ地にそろえる。枠と地色を持たせると、
+   上部バーでここだけが箱として浮く。選ばれている側は色で示す。 */
 .kd-seg {
   display: flex;
   flex: 0 0 auto;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--kd-border);
-  border-radius: var(--kd-radius-md);
-  background: var(--kd-bg);
 }
 
 .kd-seg__item {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--kd-radius-sm);
   background: transparent;
-  color: var(--kd-muted);
+  color: var(--kd-fg-dim);
   cursor: pointer;
   transition:
     background var(--kd-dur-instant) var(--kd-ease-out),
@@ -110,13 +106,13 @@
 }
 
 .kd-seg__item:hover {
+  background: var(--kd-hover);
   color: var(--kd-fg);
 }
 
 .kd-seg__item[aria-pressed="true"] {
-  background: var(--kd-elevated);
+  background: color-mix(in srgb, var(--kd-accent) 14%, transparent);
   color: var(--kd-accent);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
 }
 
 /* パンくずの区切り。押せないことが分かるよう、うんと淡くする。 */
@@ -1999,6 +1995,7 @@ button.kd-row__expand:hover {
 
 /* 行番号は押すと指摘の対象になる。押せることが分かる程度に反応させる。 */
 .kd-num--pick {
+  position: relative;
   border: 0;
   font: inherit;
   font-size: 11px;
@@ -2009,6 +2006,40 @@ button.kd-row__expand:hover {
 .kd-num--pick:hover {
   background: color-mix(in srgb, var(--kd-accent) 22%, transparent);
   color: var(--kd-accent);
+}
+
+/* 指摘を足せる印。行に重ねると本文を隠すので、行番号の左端に出す。
+   折り返した行でも先頭行に付くよう、上端から 1 行分の中で縦を取る。 */
+.kd-num__add {
+  position: absolute;
+  left: 3px;
+  top: calc((var(--kd-line-h) - 16px) / 2);
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--kd-accent);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+/* 行に触れた時点で出す。そこではじめて指摘できると分かる。 */
+.kd-row:hover .kd-num__add {
+  opacity: 0.5;
+}
+
+/* 行番号まで来たら、その側に指摘が付くことを確定して見せる。 */
+.kd-num--pick:hover .kd-num__add {
+  opacity: 1;
+}
+
+.kd-num--pick:hover .kd-num__no {
+  opacity: 0.35;
 }
 
 /* 選んだ行は行全体を塗る。左右に並べたときに片側だけ塗ると、対になっている

@@ -706,7 +706,11 @@ function Gutter({
       }}
       title="この行に指摘する（なぞる / Shift+クリックで範囲）"
     >
-      {no}
+      {/* 押せることが見えないと、行に指摘できると気づけない。 */}
+      <span className="kd-num__add" aria-hidden>
+        +
+      </span>
+      <span className="kd-num__no">{no}</span>
     </button>
   );
 }
