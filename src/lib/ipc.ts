@@ -1,6 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 import type {
+  AppTarget,
   DiffFile,
   DiffResponse,
   DiffSpec,
@@ -11,6 +12,7 @@ import type {
   ThreadInput,
   ThreadView,
   ViewedState,
+  WatchEvent,
   WorktreeInfo,
   WorktreeStatus,
 } from "./types";
@@ -45,6 +47,14 @@ export const api = {
     path: string,
     context: number,
   ) => invoke<DiffFile | null>("file_diff", { worktree, spec, path, context }),
+
+  installedApps: () => invoke<AppTarget[]>("installed_apps"),
+  openInApp: (appId: string, path: string, line: number | null) =>
+    invoke<void>("open_in_app", { appId, path, line }),
+
+  startWatch: (worktree: string, channel: Channel<WatchEvent>) =>
+    invoke<number>("start_watch", { worktree, channel }),
+  stopWatch: (id: number) => invoke<void>("stop_watch", { id }),
 
   listViewed: (revisionKey: string, current: Record<string, string>) =>
     invoke<ViewedState[]>("list_viewed", { revisionKey, current }),

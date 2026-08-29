@@ -1741,3 +1741,9 @@
 .kd-progress__stale {
   color: var(--kd-accent-2);
 }
+
+.kd-menuitem__hint {
+  flex: 0 0 auto;
+  color: var(--kd-muted);
+  font-size: 10px;
+}

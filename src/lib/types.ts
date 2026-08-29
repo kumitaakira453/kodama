@@ -254,6 +254,11 @@ export interface ViewedState {
 
 export type ViewMode = "split" | "unified";
 
+/** 監視から届く通知。 */
+export interface WatchEvent {
+  kind: "files" | "ledger";
+}
+
 /** 今この環境で起動できるアプリ。 */
 export interface AppTarget {
   id: string;

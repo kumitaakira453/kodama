@@ -1,4 +1,5 @@
-import type { DiffFile, ViewedStatus } from "../../lib/types";
+import type { AppTarget, DiffFile, ViewedStatus } from "../../lib/types";
+import { Dropdown } from "../ui/Dropdown";
 import { Icon } from "../ui/Icon";
 
 interface FileHeaderProps {
@@ -7,7 +8,8 @@ interface FileHeaderProps {
   viewed: ViewedStatus;
   onToggle: () => void;
   onToggleViewed: (path: string) => void;
-  onReveal: (path: string) => void;
+  apps: AppTarget[];
+  onOpen: (appId: string, path: string, line: number | null) => void;
   /** 上端に固定して出しているヘッダか。影の有無だけが変わる。 */
   pinned?: boolean;
 }
@@ -19,7 +21,8 @@ export function FileHeader({
   viewed,
   onToggle,
   onToggleViewed,
-  onReveal,
+  apps,
+  onOpen,
   pinned = false,
 }: FileHeaderProps) {
   return (
@@ -69,14 +72,25 @@ export function FileHeader({
         閲覧済
       </label>
 
-      <button
-        className="kd-fhead__action"
-        title="Finder で表示"
-        aria-label="Finder で表示"
-        onClick={() => onReveal(file.path)}
-      >
-        <Icon name="folder_open" size={15} />
-      </button>
+      <Dropdown icon="open_in_new" label="開く" width={220} title="このファイルを開く">
+        {(close) =>
+          apps.map((app) => (
+            <button
+              key={app.id}
+              className="kd-menuitem"
+              onClick={() => {
+                onOpen(app.id, file.path, file.hunks[0]?.newStart ?? null);
+                close();
+              }}
+            >
+              <span className="kd-menuitem__text">{app.label}</span>
+              {app.supportsLine ? (
+                <span className="kd-menuitem__hint">行を指定</span>
+              ) : null}
+            </button>
+          ))
+        }
+      </Dropdown>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+pub mod apps;
 pub mod gh;
 pub mod git;
 pub mod inline;
@@ -6,3 +7,4 @@ pub mod paths;
 pub mod shell;
 pub mod store;
 pub mod syntax;
+pub mod watcher;

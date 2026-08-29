@@ -94,6 +94,10 @@ pub fn run() {
             commands::viewed::list_viewed,
             commands::viewed::set_viewed,
             commands::viewed::clear_viewed,
+            commands::external::installed_apps,
+            commands::external::open_in_app,
+            commands::watch::start_watch,
+            commands::watch::stop_watch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

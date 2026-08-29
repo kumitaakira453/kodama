@@ -15,7 +15,10 @@ import { Toasts } from "./components/ui/Toasts";
 import { useDiff } from "./hooks/useDiff";
 import { useProjects } from "./hooks/useProjects";
 import { useRevisions } from "./hooks/useRevisions";
+import { useApps } from "./hooks/useApps";
+import { useThreads } from "./hooks/useThreads";
 import { useViewed } from "./hooks/useViewed";
+import { useWatch } from "./hooks/useWatch";
 import { useTheme } from "./hooks/useTheme";
 import { useToast } from "./hooks/useToast";
 import {
@@ -37,6 +40,12 @@ export default function App() {
   const { projects, loading, reload, addProject, removeProject } = useProjects();
   const { reload: reloadDiff } = useDiff();
   const { viewed, toggle: toggleViewed, progress } = useViewed();
+  const { threads, refresh: refreshThreads, add, reply, resolve, drop } =
+    useThreads();
+  const { apps, open: openApp } = useApps();
+
+  // 台帳は CLI（AI 側）から書き換わる。フォーカスが戻るのを待たずに反映する。
+  useWatch({ onFiles: reloadDiff, onLedger: refreshThreads });
   const { showError } = useToast();
 
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
@@ -72,14 +81,6 @@ export default function App() {
       void revealItemInDir(path).catch(showError);
     },
     [showError],
-  );
-
-  const revealInWorktree = useCallback(
-    (relative: string) => {
-      if (!worktree) return;
-      revealAbsolute(`${worktree}/${relative}`);
-    },
-    [worktree, revealAbsolute],
   );
 
   const dragSidebar = useCallback(
@@ -171,8 +172,16 @@ export default function App() {
         <main className="kd-main">
           <DiffCanvas
             viewed={viewed}
+            threads={threads}
+            apps={apps}
             onToggleViewed={toggleViewed}
-            onReveal={revealInWorktree}
+            onAddThread={(input) => void add(input)}
+            onReply={(id, body) => void reply(id, body)}
+            onResolve={(id) => void resolve(id)}
+            onDropThread={(id) => void drop(id)}
+            onOpenApp={(appId, path, line) =>
+              worktree ? openApp(appId, `${worktree}/${path}`, line) : undefined
+            }
           />
         </main>
       </div>

@@ -3,7 +3,6 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useHighlight } from "../../hooks/useHighlight";
-import { useThreads } from "../../hooks/useThreads";
 import {
   buildRows,
   fileHeaderIndex,
@@ -11,7 +10,15 @@ import {
   rowHeight,
   type RowItem,
 } from "../../lib/diff/rows";
-import type { DiffFile, DiffLine, Side, ViewedStatus } from "../../lib/types";
+import type {
+  AppTarget,
+  DiffFile,
+  DiffLine,
+  Side,
+  ThreadInput,
+  ThreadView,
+  ViewedStatus,
+} from "../../lib/types";
 import {
   collapsedFilesAtom,
   currentFileAtom,
@@ -32,8 +39,14 @@ import { FileHeader } from "./FileHeader";
 
 interface DiffCanvasProps {
   viewed: Record<string, ViewedStatus>;
+  threads: ThreadView[];
+  apps: AppTarget[];
   onToggleViewed: (path: string) => void;
-  onReveal: (path: string) => void;
+  onAddThread: (input: ThreadInput) => void;
+  onReply: (id: string, body: string) => void;
+  onResolve: (id: string) => void;
+  onDropThread: (id: string) => void;
+  onOpenApp: (appId: string, path: string, line: number | null) => void;
 }
 
 /** 行番号をクリックしたときに親へ渡す情報。 */
@@ -52,7 +65,17 @@ interface GutterHit {
  * スクロールコンテナはこれと左ツリーの 2 つだけ。入れ子にすると、親と子の
  * どちらが動くのか予測できなくなる。
  */
-export function DiffCanvas({ viewed, onToggleViewed, onReveal }: DiffCanvasProps) {
+export function DiffCanvas({
+  viewed,
+  threads,
+  apps,
+  onToggleViewed,
+  onAddThread,
+  onReply,
+  onResolve,
+  onDropThread,
+  onOpenApp,
+}: DiffCanvasProps) {
   const diff = useAtomValue(diffAtom);
   const loading = useAtomValue(diffLoadingAtom);
   const mode = useAtomValue(viewModeAtom);
@@ -62,7 +85,6 @@ export function DiffCanvas({ viewed, onToggleViewed, onReveal }: DiffCanvasProps
   const [jump, setJump] = useAtom(jumpRequestAtom);
   const [selection, setSelection] = useAtom(lineSelectionAtom);
   const setCurrentFile = useSetAtom(currentFileAtom);
-  const { threads, add, reply, resolve, drop } = useThreads();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const files = useMemo(() => diff?.files ?? [], [diff]);
@@ -127,7 +149,7 @@ export function DiffCanvas({ viewed, onToggleViewed, onReveal }: DiffCanvasProps
   const submitThread = useCallback(
     (body: string) => {
       if (!selection || !worktree || !diff) return;
-      void add({
+      onAddThread({
         repo: worktree,
         revisionKey: diff.resolved.revisionKey,
         file: selection.file,
@@ -141,7 +163,7 @@ export function DiffCanvas({ viewed, onToggleViewed, onReveal }: DiffCanvasProps
       });
       setSelection(null);
     },
-    [selection, worktree, diff, add, setSelection],
+    [selection, worktree, diff, onAddThread, setSelection],
   );
 
   // ツリーからの「ここまで飛べ」を受ける。
@@ -247,7 +269,8 @@ export function DiffCanvas({ viewed, onToggleViewed, onReveal }: DiffCanvasProps
             viewed={viewed[pinnedFile.path] ?? "unviewed"}
             onToggle={() => toggleFile(pinnedFile.path)}
             onToggleViewed={onToggleViewed}
-            onReveal={onReveal}
+            apps={apps}
+            onOpen={onOpenApp}
             pinned
           />
         </div>
@@ -278,13 +301,14 @@ export function DiffCanvas({ viewed, onToggleViewed, onReveal }: DiffCanvasProps
                 viewed={viewed}
                 onToggleViewed={onToggleViewed}
                 onToggle={toggleFile}
-                onReveal={onReveal}
+                apps={apps}
+                onOpenApp={onOpenApp}
                 onGutter={onGutter}
                 onSubmit={submitThread}
                 onCancel={() => setSelection(null)}
-                onReply={reply}
-                onResolve={resolve}
-                onDrop={drop}
+                onReply={onReply}
+                onResolve={onResolve}
+                onDrop={onDropThread}
               />
             </div>
           ))}
@@ -301,7 +325,8 @@ interface RowProps {
   viewed: Record<string, ViewedStatus>;
   onToggleViewed: (path: string) => void;
   onToggle: (path: string) => void;
-  onReveal: (path: string) => void;
+  apps: AppTarget[];
+  onOpenApp: (appId: string, path: string, line: number | null) => void;
   onGutter: (hit: GutterHit) => void;
   onSubmit: (body: string) => void;
   onCancel: () => void;
@@ -317,7 +342,8 @@ function Row({
   viewed,
   onToggleViewed,
   onToggle,
-  onReveal,
+  apps,
+  onOpenApp,
   onGutter,
   onSubmit,
   onCancel,
@@ -334,7 +360,8 @@ function Row({
           viewed={viewed[row.file.path] ?? "unviewed"}
           onToggle={() => onToggle(row.file.path)}
           onToggleViewed={onToggleViewed}
-          onReveal={onReveal}
+          apps={apps}
+          onOpen={onOpenApp}
         />
       );
 

@@ -1,8 +1,10 @@
 pub mod diff;
+pub mod external;
 pub mod project;
 pub mod review;
 pub mod revision;
 pub mod viewed;
+pub mod watch;
 pub mod worktree;
 
 use crate::error::{KdError, KdResult};
