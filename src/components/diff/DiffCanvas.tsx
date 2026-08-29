@@ -2,32 +2,46 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
+import { useHighlight } from "../../hooks/useHighlight";
+import { useThreads } from "../../hooks/useThreads";
 import {
   buildRows,
   fileHeaderIndex,
   maxLineDigits,
-  maxLineLength,
   rowHeight,
   type RowItem,
 } from "../../lib/diff/rows";
-import { useHighlight } from "../../hooks/useHighlight";
-import type { DiffLine } from "../../lib/types";
+import type { DiffFile, DiffLine, Side } from "../../lib/types";
 import {
   collapsedFilesAtom,
   currentFileAtom,
   diffAtom,
   diffLoadingAtom,
   jumpRequestAtom,
+  lineSelectionAtom,
+  selectedWorktreeAtom,
   viewModeAtom,
   wordDiffAtom,
-  wrapLinesAtom,
+  type LineSelection,
 } from "../../state/atoms";
+import { Composer } from "../review/Composer";
+import { ThreadCard } from "../review/ThreadCard";
 import { RingSpinner } from "../ui/RingSpinner";
 import { DiffCode } from "./DiffCode";
 import { FileHeader } from "./FileHeader";
 
 interface DiffCanvasProps {
   onReveal: (path: string) => void;
+}
+
+/** 行番号をクリックしたときに親へ渡す情報。 */
+interface GutterHit {
+  file: DiffFile;
+  side: Side;
+  line: number;
+  content: string;
+  context: string;
+  extend: boolean;
 }
 
 /**
@@ -41,25 +55,29 @@ export function DiffCanvas({ onReveal }: DiffCanvasProps) {
   const loading = useAtomValue(diffLoadingAtom);
   const mode = useAtomValue(viewModeAtom);
   const wordDiff = useAtomValue(wordDiffAtom);
-  const wrap = useAtomValue(wrapLinesAtom);
+  const worktree = useAtomValue(selectedWorktreeAtom);
   const [collapsed, setCollapsed] = useAtom(collapsedFilesAtom);
   const [jump, setJump] = useAtom(jumpRequestAtom);
+  const [selection, setSelection] = useAtom(lineSelectionAtom);
   const setCurrentFile = useSetAtom(currentFileAtom);
+  const { threads, add, reply, resolve, drop } = useThreads();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const files = useMemo(() => diff?.files ?? [], [diff]);
   const rows = useMemo(
-    () => buildRows(files, mode, collapsed),
-    [files, mode, collapsed],
+    () => buildRows(files, mode, collapsed, threads, selection),
+    [files, mode, collapsed, threads, selection],
   );
   const headerIndex = useMemo(() => fileHeaderIndex(rows), [rows]);
   const digits = useMemo(() => maxLineDigits(files), [files]);
-  const columns = useMemo(() => maxLineLength(files), [files]);
 
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (i) => rowHeight(rows[i]),
+    // 長い行は折り返すので高さが可変になる。見積もりは型ごとの値を出発点にし、
+    // 実際の高さは描画後に測って置き換える。
+    measureElement: (el) => el.getBoundingClientRect().height,
     overscan: 20,
     getItemKey: (i) => rows[i].key,
   });
@@ -73,6 +91,55 @@ export function DiffCanvas({ onReveal }: DiffCanvasProps) {
         return next;
       }),
     [setCollapsed],
+  );
+
+  /** 行番号のクリック。Shift を押していれば起点を保って範囲を伸ばす。 */
+  const onGutter = useCallback(
+    (hit: GutterHit) => {
+      setSelection((prev) => {
+        if (
+          hit.extend &&
+          prev &&
+          prev.file === hit.file.path &&
+          prev.side === hit.side
+        ) {
+          return {
+            ...prev,
+            start: Math.min(prev.start, hit.line),
+            end: Math.max(prev.end, hit.line),
+          };
+        }
+        return {
+          file: hit.file.path,
+          side: hit.side,
+          start: hit.line,
+          end: hit.line,
+          quote: hit.content,
+          context: hit.context,
+        };
+      });
+    },
+    [setSelection],
+  );
+
+  const submitThread = useCallback(
+    (body: string) => {
+      if (!selection || !worktree || !diff) return;
+      void add({
+        repo: worktree,
+        revisionKey: diff.resolved.revisionKey,
+        file: selection.file,
+        side: selection.side,
+        lineStart: selection.start,
+        lineEnd: selection.end,
+        quote: selection.quote,
+        context: selection.context,
+        body,
+        author: "you",
+      });
+      setSelection(null);
+    },
+    [selection, worktree, diff, add, setSelection],
   );
 
   // ツリーからの「ここまで飛べ」を受ける。
@@ -102,6 +169,14 @@ export function DiffCanvas({ onReveal }: DiffCanvasProps) {
       window.clearTimeout(timer);
     };
   }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelection(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setSelection]);
 
   const items = virtualizer.getVirtualItems();
 
@@ -178,13 +253,7 @@ export function DiffCanvas({ onReveal }: DiffCanvasProps) {
         ref={scrollRef}
         className="kd-canvas__scroll"
         data-mode={mode}
-        data-wrap={wrap || undefined}
-        style={
-          {
-            "--kd-digits": String(digits),
-            "--kd-columns": String(columns),
-          } as React.CSSProperties
-        }
+        style={{ "--kd-digits": String(digits) } as React.CSSProperties}
       >
         <div
           className="kd-canvas__spacer"
@@ -194,16 +263,22 @@ export function DiffCanvas({ onReveal }: DiffCanvasProps) {
             <div
               key={item.key}
               className="kd-canvas__slot"
-              style={{
-                height: item.size,
-                transform: `translateY(${item.start}px)`,
-              }}
+              data-index={item.index}
+              ref={virtualizer.measureElement}
+              style={{ transform: `translateY(${item.start}px)` }}
             >
               <Row
                 row={rows[item.index]}
                 wordDiff={wordDiff}
+                selection={selection}
                 onToggle={toggleFile}
                 onReveal={onReveal}
+                onGutter={onGutter}
+                onSubmit={submitThread}
+                onCancel={() => setSelection(null)}
+                onReply={reply}
+                onResolve={resolve}
+                onDrop={drop}
               />
             </div>
           ))}
@@ -213,17 +288,33 @@ export function DiffCanvas({ onReveal }: DiffCanvasProps) {
   );
 }
 
+interface RowProps {
+  row: RowItem;
+  wordDiff: boolean;
+  selection: LineSelection | null;
+  onToggle: (path: string) => void;
+  onReveal: (path: string) => void;
+  onGutter: (hit: GutterHit) => void;
+  onSubmit: (body: string) => void;
+  onCancel: () => void;
+  onReply: (id: string, body: string) => void;
+  onResolve: (id: string) => void;
+  onDrop: (id: string) => void;
+}
+
 function Row({
   row,
   wordDiff,
+  selection,
   onToggle,
   onReveal,
-}: {
-  row: RowItem;
-  wordDiff: boolean;
-  onToggle: (path: string) => void;
-  onReveal: (path: string) => void;
-}) {
+  onGutter,
+  onSubmit,
+  onCancel,
+  onReply,
+  onResolve,
+  onDrop,
+}: RowProps) {
   switch (row.type) {
     case "file-header":
       return (
@@ -241,9 +332,35 @@ function Row({
     case "notice":
       return <div className="kd-notice">{row.text}</div>;
 
+    case "thread":
+      return (
+        <div className="kd-inset">
+          <ThreadCard
+            view={row.view}
+            onReply={onReply}
+            onResolve={onResolve}
+            onDrop={onDrop}
+          />
+        </div>
+      );
+
+    case "composer":
+      return (
+        <div className="kd-inset">
+          <Composer
+            selection={row.selection}
+            onSubmit={onSubmit}
+            onCancel={onCancel}
+          />
+        </div>
+      );
+
     case "hunk":
       return (
-        <div className="kd-row kd-row--hunk" title={`${row.label} ${row.hunk.header}`}>
+        <div
+          className="kd-row kd-row--hunk"
+          title={`${row.label} ${row.hunk.header}`}
+        >
           <span className="kd-row__expand" aria-hidden>
             <span className="material-symbols-rounded">unfold_more</span>
           </span>
@@ -254,36 +371,120 @@ function Row({
         </div>
       );
 
-    case "line":
+    case "line": {
+      const line = row.line;
+      const picked = (side: Side, no: number | null) =>
+        no !== null &&
+        selection?.file === row.file.path &&
+        selection.side === side &&
+        no >= selection.start &&
+        no <= selection.end;
+
       return (
-        <div className="kd-row" data-kind={row.line.kind}>
-          <span className="kd-num">{row.line.oldNumber ?? ""}</span>
-          <span className="kd-num">{row.line.newNumber ?? ""}</span>
-          <span className="kd-sign">{sign(row.line)}</span>
+        <div className="kd-row" data-kind={line.kind}>
+          <Gutter
+            no={line.oldNumber}
+            picked={picked("old", line.oldNumber)}
+            onPick={(extend) => {
+              if (line.oldNumber === null) return;
+              onGutter({
+                file: row.file,
+                side: "old",
+                line: line.oldNumber,
+                content: line.content,
+                context: row.context,
+                extend,
+              });
+            }}
+          />
+          <Gutter
+            no={line.newNumber}
+            picked={picked("new", line.newNumber)}
+            onPick={(extend) => {
+              if (line.newNumber === null) return;
+              onGutter({
+                file: row.file,
+                side: "new",
+                line: line.newNumber,
+                content: line.content,
+                context: row.context,
+                extend,
+              });
+            }}
+          />
+          <span className="kd-sign">{sign(line)}</span>
           <span className="kd-code">
-            <DiffCode line={row.line} wordDiff={wordDiff} />
+            <DiffCode line={line} wordDiff={wordDiff} />
           </span>
         </div>
       );
+    }
 
     case "split":
       return (
         <div className="kd-row kd-row--split">
-          <Side line={row.left} side="old" wordDiff={wordDiff} />
-          <Side line={row.right} side="new" wordDiff={wordDiff} />
+          <SideCell
+            line={row.left}
+            side="old"
+            file={row.file}
+            context={row.context}
+            selection={selection}
+            wordDiff={wordDiff}
+            onGutter={onGutter}
+          />
+          <SideCell
+            line={row.right}
+            side="new"
+            file={row.file}
+            context={row.context}
+            selection={selection}
+            wordDiff={wordDiff}
+            onGutter={onGutter}
+          />
         </div>
       );
   }
 }
 
-function Side({
+/** 行番号のセル。押すと指摘の対象になる。 */
+function Gutter({
+  no,
+  picked,
+  onPick,
+}: {
+  no: number | null;
+  picked: boolean;
+  onPick: (extend: boolean) => void;
+}) {
+  if (no === null) return <span className="kd-num" />;
+  return (
+    <button
+      className="kd-num kd-num--pick"
+      data-picked={picked || undefined}
+      onClick={(e) => onPick(e.shiftKey)}
+      title="この行に指摘する（Shift+クリックで範囲）"
+    >
+      {no}
+    </button>
+  );
+}
+
+function SideCell({
   line,
   side,
+  file,
+  context,
+  selection,
   wordDiff,
+  onGutter,
 }: {
   line: DiffLine | null;
-  side: "old" | "new";
+  side: Side;
+  file: DiffFile;
+  context: string;
+  selection: LineSelection | null;
   wordDiff: boolean;
+  onGutter: (hit: GutterHit) => void;
 }) {
   if (!line) {
     return (
@@ -294,11 +495,31 @@ function Side({
       </>
     );
   }
+  const no = side === "old" ? line.oldNumber : line.newNumber;
+  const picked =
+    no !== null &&
+    selection?.file === file.path &&
+    selection.side === side &&
+    no >= selection.start &&
+    no <= selection.end;
+
   return (
     <>
-      <span className="kd-num" data-kind={line.kind}>
-        {(side === "old" ? line.oldNumber : line.newNumber) ?? ""}
-      </span>
+      <Gutter
+        no={no}
+        picked={picked}
+        onPick={(extend) => {
+          if (no === null) return;
+          onGutter({
+            file,
+            side,
+            line: no,
+            content: line.content,
+            context,
+            extend,
+          });
+        }}
+      />
       <span className="kd-sign" data-kind={line.kind}>
         {sign(line)}
       </span>

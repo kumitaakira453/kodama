@@ -10,11 +10,11 @@ import {
   themeAtom,
   type Theme,
 } from "../../state/atoms";
-import { useCurrentWorktrees } from "../../hooks/useProjects";
 import { IconButton } from "../ui/Button";
 import { Dropdown } from "../ui/Dropdown";
 import { Icon } from "../ui/Icon";
 import { RevisionMenu } from "./RevisionMenu";
+import { WorktreeMenu } from "./WorktreeMenu";
 
 const NEXT_THEME: Record<Theme, Theme> = {
   light: "dark",
@@ -47,16 +47,11 @@ export function TopBar({ projects, onReload }: TopBarProps) {
   const [theme, setTheme] = useAtom(themeAtom);
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
   const [projectId, setProjectId] = useAtom(selectedProjectIdAtom);
-  const [worktree, setWorktree] = useAtom(selectedWorktreeAtom);
+  const setWorktree = useSetAtom(selectedWorktreeAtom);
   const setSettingsOpen = useSetAtom(settingsOpenAtom);
-  const worktrees = useCurrentWorktrees();
   const diff = useAtomValue(diffAtom);
 
   const project = projects.find((p) => p.id === projectId) ?? projects[0];
-  const current = worktrees.find((w) => w.path === worktree);
-  const worktreeLabel = current
-    ? (current.branch ?? current.head ?? current.name)
-    : "worktree";
 
   return (
     <header className="kd-topbar" data-tauri-drag-region>
@@ -107,40 +102,7 @@ export function TopBar({ projects, onReload }: TopBarProps) {
         )}
       </Dropdown>
 
-      <Dropdown icon="polyline" label={worktreeLabel} width={340}>
-        {(close) => (
-          <>
-            {worktrees.map((w) => (
-              <button
-                key={w.path}
-                className="kd-menuitem"
-                data-selected={w.path === worktree || undefined}
-                title={w.path}
-                onClick={() => {
-                  setWorktree(w.path);
-                  close();
-                }}
-              >
-                <Icon
-                  name={
-                    w.path === worktree
-                      ? "radio_button_checked"
-                      : "radio_button_unchecked"
-                  }
-                  size={15}
-                />
-                <span className="kd-menuitem__text">
-                  {w.branch ?? w.head ?? w.name}
-                </span>
-                {w.isMain ? <span className="kd-chip">main</span> : null}
-              </button>
-            ))}
-            {worktrees.length === 0 ? (
-              <p className="kd-revmenu__note">worktree がありません</p>
-            ) : null}
-          </>
-        )}
-      </Dropdown>
+      <WorktreeMenu />
 
       <RevisionMenu />
 

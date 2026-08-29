@@ -48,6 +48,15 @@ export interface WorktreeStatus {
   error: string | null;
 }
 
+export type PrState = "draft" | "open" | "merged" | "closed";
+
+export interface PrInfo {
+  number: number;
+  title: string;
+  state: PrState;
+  url: string;
+}
+
 export interface RevisionList {
   commits: CommitInfo[];
   branches: string[];
@@ -172,23 +181,67 @@ export interface DiffResponse {
   truncated: boolean;
 }
 
-export type CommentSide = "old" | "new";
+export type Side = "old" | "new";
 
 export interface Comment {
   id: string;
-  projectId: string;
-  worktreePath: string;
+  author: string;
+  body: string;
+  createdAt: number;
+}
+
+export type ThreadStatus =
+  | { kind: "open" }
+  | { kind: "resolved"; by: string; at: number }
+  | { kind: "dropped"; by: string; at: number };
+
+export interface Thread {
+  id: string;
+  repo: string;
   revisionKey: string;
   file: string;
-  side: CommentSide;
+  side: Side;
   lineStart: number;
   lineEnd: number;
-  body: string;
-  /** AI プロンプト生成に使う、指摘対象の行の内容。 */
-  codeSnippet: string;
-  resolved: boolean;
+  /** 指摘時点の該当行の逐語。位置が特定できなくなっても対象を見失わない。 */
+  quote: string;
+  context: string;
+  baseHash: string;
+  status: ThreadStatus;
+  comments: Comment[];
   createdAt: number;
-  updatedAt: number;
+}
+
+/**
+ * 指摘の対象が今どうなっているか。
+ * `status`（解決したか）とは別の軸で持つ。混ぜると書き換わった指摘が一覧から消える。
+ */
+export type AnchorState =
+  | { kind: "unchanged" }
+  | { kind: "moved"; line: number }
+  | { kind: "rewritten" }
+  | { kind: "removed" }
+  | { kind: "committed"; sha: string }
+  | { kind: "noFile" };
+
+export interface ThreadView {
+  thread: Thread;
+  anchor: AnchorState;
+  currentText: string | null;
+}
+
+/** 指摘を作るときに渡す内容。 */
+export interface ThreadInput {
+  repo: string;
+  revisionKey: string;
+  file: string;
+  side: Side;
+  lineStart: number;
+  lineEnd: number;
+  quote: string;
+  context: string;
+  body: string;
+  author: string;
 }
 
 /** 閲覧後に差分が変わった状態を `stale` として区別する。 */

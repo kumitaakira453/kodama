@@ -5,7 +5,7 @@
   "identifier": "com.kodama.app",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5318",
+    "devUrl": "http://localhost:5319",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },

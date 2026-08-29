@@ -4,8 +4,11 @@ import { atomWithStorage } from "jotai/utils";
 import type { CommitSelection } from "../lib/revisions";
 import type {
   DiffResponse,
+  PrInfo,
   Project,
   RevisionList,
+  Side,
+  ThreadView,
   ViewMode,
   WorktreeInfo,
   WorktreeStatus,
@@ -96,6 +99,8 @@ export const projectsAtom = atom<Project[]>([]);
 export const worktreesAtom = atom<Record<string, WorktreeInfo[]>>({});
 /** worktree のパス → 状態。一覧より後から埋まる。 */
 export const statusesAtom = atom<Record<string, WorktreeStatus>>({});
+/** ブランチ名 → PR。`gh` が無い環境では空のまま。 */
+export const pullRequestsAtom = atom<Record<string, PrInfo>>({});
 /** 選択中 worktree のコミット一覧。 */
 export const revisionsAtom = atom<RevisionList | null>(null);
 export const diffAtom = atom<DiffResponse | null>(null);
@@ -130,3 +135,23 @@ export interface Toast {
 
 export const toastsAtom = atom<Toast[]>([]);
 export const settingsOpenAtom = atom<boolean>(false);
+
+// ---- 指摘 ----
+
+export const threadsAtom = atom<ThreadView[]>([]);
+
+/** 行番号 gutter で選んでいる範囲。指摘の対象になる。 */
+export interface LineSelection {
+  file: string;
+  side: Side;
+  start: number;
+  end: number;
+  /** 対象行の逐語。指摘に添えて保存する。 */
+  quote: string;
+  /** ハンクヘッダ。行番号の代わりに場所を指す手がかりになる。 */
+  context: string;
+}
+
+export const lineSelectionAtom = atom<LineSelection | null>(null);
+/** 返信を書いているスレッド。 */
+export const replyingToAtom = atom<string | null>(null);

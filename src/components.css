@@ -590,7 +590,9 @@
 /* スクロールを持つのはここ。横も縦もこの 1 つで受ける。 */
 .kd-canvas__scroll {
   height: 100%;
-  overflow: auto;
+  /* 横には広げない。長い行は折り返してペイン幅に収める。 */
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 0 16px 48px;
   font-family: var(--kd-font-mono);
   font-size: var(--kd-code-size);
@@ -607,12 +609,7 @@
 
 .kd-canvas__spacer {
   position: relative;
-  /* 仮想化した行は絶対配置で親の幅を押し広げないため、内容の幅をここで持つ。
-     こうしないと長い行が見切れるか、行ごとに横スクロールが生えてしまう。 */
-  min-width: calc(
-    var(--kd-gutter) * 2 + var(--kd-sign-w) + var(--kd-columns) * 1ch +
-      var(--kd-code-pad) * 2
-  );
+  width: 100%;
 }
 
 .kd-canvas__slot {
@@ -634,7 +631,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 100%;
+  height: var(--kd-file-header-h);
   padding: 0 10px 0 4px;
   border: 1px solid var(--kd-border);
   border-radius: var(--kd-radius-sm) var(--kd-radius-sm) 0 0;
@@ -733,7 +730,6 @@
 
 /* カードの下端。角を丸めて閉じ、残りを次のカードとの余白にする。 */
 .kd-gap {
-  height: 100%;
   padding-bottom: 8px;
 }
 
@@ -747,7 +743,7 @@
 }
 
 .kd-notice {
-  height: 100%;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -764,20 +760,18 @@
 .kd-row {
   display: grid;
   grid-template-columns: var(--kd-cols-unified);
-  align-items: center;
-  height: 100%;
+  /* セルは行の高さいっぱいに伸ばす。行番号セルの背景が途切れないようにする。 */
+  align-items: stretch;
+  min-height: var(--kd-line-h);
   border-left: 1px solid var(--kd-border);
   border-right: 1px solid var(--kd-border);
-  white-space: pre;
+  /* 折り返して収める。横スクロールを作らないので、ペインの幅を超えない。 */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .kd-canvas__scroll[data-mode="split"] .kd-row--split {
   grid-template-columns: var(--kd-cols-split);
-}
-
-.kd-canvas__scroll[data-wrap] .kd-row {
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .kd-row[data-kind="add"] {
@@ -832,11 +826,12 @@
 }
 
 .kd-num {
-  height: 100%;
   padding: 0 10px;
   display: flex;
-  align-items: center;
+  /* 折り返した行では番号を先頭行の高さに揃える。中央に置くと本文とずれる。 */
+  align-items: flex-start;
   justify-content: flex-end;
+  line-height: var(--kd-line-h);
   color: var(--kd-muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
@@ -845,19 +840,21 @@
 
 .kd-sign {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  height: 100%;
+  line-height: var(--kd-line-h);
   color: var(--kd-muted);
   user-select: none;
 }
 
+/* ここを flex にしてはいけない。空白だけのテキストは「空白のみの匿名フレックス
+   アイテム」として描画されず、インデントと語間のスペースが丸ごと消える。
+   高さ合わせは line-height で取る。 */
 .kd-code {
   min-width: 0;
-  height: 100%;
-  display: flex;
-  align-items: center;
   padding-right: var(--kd-code-pad);
+  line-height: var(--kd-line-h);
+  white-space: inherit;
 }
 
 .kd-code--empty {
@@ -877,6 +874,7 @@
 
 .kd-row--hunk {
   grid-template-columns: calc(var(--kd-gutter) * 2 + var(--kd-sign-w)) minmax(0, 1fr);
+  align-items: center;
   background: var(--kd-diff-hunk);
   color: var(--kd-muted);
   border-top: 1px solid var(--kd-border);
@@ -1359,4 +1357,316 @@
 .kd-toast__close:hover {
   background: var(--kd-hover);
   color: var(--kd-fg);
+}
+
+/* ==========================================================================
+   worktree のメニュー
+   ブランチ名だけでは「今どうなっているか」が分からないので、
+   未コミットの有無・最終コミット・上流との差・PR を 1 行に収める。
+   ========================================================================== */
+
+.kd-wtrow {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-wtrow + .kd-wtrow {
+  border-top: 1px solid var(--kd-border);
+  border-radius: 0;
+}
+
+.kd-wtrow:hover {
+  background: var(--kd-hover);
+}
+
+.kd-wtrow[data-selected] {
+  background: var(--kd-active);
+}
+
+.kd-wtrow__title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.kd-wtrow__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.kd-wtrow__main {
+  color: var(--kd-muted);
+  font-size: 12px;
+}
+
+.kd-wtrow__dirty {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kd-accent-2) 22%, transparent);
+  color: var(--kd-accent-2);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.kd-wtrow__subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kd-fg-dim);
+  font-size: 12.5px;
+}
+
+.kd-wtrow__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--kd-muted);
+  font-size: 11px;
+  font-family: var(--kd-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-wtrow__branch {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kd-wtrow__ahead {
+  color: var(--kd-accent);
+}
+.kd-wtrow__behind {
+  color: var(--kd-danger);
+}
+
+.kd-wtrow__time {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.kd-wtrow__pr {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 2px;
+  color: var(--kd-muted);
+  font-size: 11px;
+}
+
+.kd-wtrow__prnum {
+  flex: 0 0 auto;
+  font-family: var(--kd-font-mono);
+}
+
+.kd-wtrow__prtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kd-prbadge {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.kd-prbadge--draft {
+  color: var(--kd-muted);
+}
+.kd-prbadge--open {
+  color: var(--kd-accent);
+}
+.kd-prbadge--merged {
+  color: var(--kd-t-function);
+}
+.kd-prbadge--closed {
+  color: var(--kd-danger);
+}
+
+/* ==========================================================================
+   指摘（スレッドと入力欄）
+   ========================================================================== */
+
+/* diff の行の列にそのまま挟むので、カードの枠は自前で持つ。 */
+.kd-inset {
+  padding: 8px 12px;
+  border-left: 1px solid var(--kd-border);
+  border-right: 1px solid var(--kd-border);
+  background: color-mix(in srgb, var(--kd-muted) 5%, transparent);
+  font-family: var(--kd-font-sans);
+}
+
+.kd-thread,
+.kd-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--kd-border-strong);
+  border-radius: var(--kd-radius-md);
+  background: var(--kd-elevated);
+}
+
+.kd-thread[data-lost] {
+  border-color: color-mix(in srgb, var(--kd-accent-2) 55%, transparent);
+}
+
+.kd-thread__head,
+.kd-composer__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--kd-muted);
+  font-size: 11px;
+}
+
+.kd-thread__id {
+  font-family: var(--kd-font-mono);
+}
+
+.kd-thread__notice {
+  color: var(--kd-accent-2);
+}
+
+.kd-thread__spacer {
+  flex: 1 1 auto;
+}
+
+.kd-thread__action {
+  padding: 3px 9px;
+  border: 1px solid var(--kd-border-strong);
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: var(--kd-fg-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-thread__action:hover {
+  background: var(--kd-hover);
+}
+
+.kd-thread__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kd-thread__comment {
+  display: flex;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.kd-thread__author {
+  flex: 0 0 auto;
+  color: var(--kd-muted);
+  font-weight: 600;
+}
+
+.kd-thread__body {
+  flex: 1 1 auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.kd-thread__reply,
+.kd-composer__foot {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.kd-composer__foot {
+  align-items: center;
+}
+
+.kd-composer__range {
+  font-family: var(--kd-font-mono);
+  font-weight: 600;
+  color: var(--kd-accent);
+}
+
+.kd-composer__context {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kd-composer__hint {
+  flex: 1 1 auto;
+  color: var(--kd-muted);
+  font-size: 11px;
+}
+
+.kd-textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--kd-border-strong);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-bg);
+  color: var(--kd-fg);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.7;
+  resize: vertical;
+  outline: none;
+}
+
+.kd-textarea:focus {
+  border-color: var(--kd-accent);
+}
+
+.kd-btn--sm {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.kd-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* 行番号は押すと指摘の対象になる。押せることが分かる程度に反応させる。 */
+.kd-num--pick {
+  border: 0;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-num--pick:hover {
+  background: color-mix(in srgb, var(--kd-accent) 22%, transparent);
+  color: var(--kd-accent);
+}
+
+.kd-num--pick[data-picked] {
+  background: var(--kd-accent);
+  color: #fff;
 }

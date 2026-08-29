@@ -1,8 +1,10 @@
 mod app;
+mod cli;
 mod commands;
 mod domain;
 mod error;
 mod infra;
+mod review;
 
 use app::state::AppState;
 
@@ -31,6 +33,22 @@ fn fix_path() {
         }
     }
     std::env::set_var("PATH", path);
+}
+
+/// 第 1 引数が `review` のときは CLI として動き、Tauri を初期化せずに終了する。
+///
+/// `args_os` を使う。`args` は UTF-8 でない引数で panic する。
+pub fn run_cli_if_requested() -> bool {
+    let first = std::env::args_os().nth(1);
+    if first.as_ref().and_then(|a| a.to_str()) != Some("review") {
+        return false;
+    }
+    fix_path();
+    if let Err(e) = cli::run() {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    }
+    true
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -63,9 +81,16 @@ pub fn run() {
             commands::project::rename_project,
             commands::worktree::list_worktrees,
             commands::worktree::worktree_statuses,
+            commands::worktree::pull_requests,
             commands::revision::list_revisions,
             commands::diff::load_diff,
             commands::diff::file_diff,
+            commands::review::list_threads,
+            commands::review::add_thread,
+            commands::review::reply_thread,
+            commands::review::resolve_thread,
+            commands::review::reopen_thread,
+            commands::review::drop_thread,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

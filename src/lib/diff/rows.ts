@@ -1,4 +1,12 @@
-import type { DiffFile, DiffHunk, DiffLine, ViewMode } from "../types";
+import type { LineSelection } from "../../state/atoms";
+import type {
+  DiffFile,
+  DiffHunk,
+  DiffLine,
+  Side,
+  ThreadView,
+  ViewMode,
+} from "../types";
 
 /**
  * 仮想リストに並べる 1 行。**全ファイルを 1 本の列に潰す。**
@@ -10,15 +18,18 @@ import type { DiffFile, DiffHunk, DiffLine, ViewMode } from "../types";
 export type RowItem =
   | { type: "file-header"; key: string; file: DiffFile; collapsed: boolean }
   | { type: "hunk"; key: string; file: DiffFile; hunk: DiffHunk; label: string }
-  | { type: "line"; key: string; file: DiffFile; line: DiffLine }
+  | { type: "line"; key: string; file: DiffFile; line: DiffLine; context: string }
   | {
       type: "split";
       key: string;
       file: DiffFile;
       left: DiffLine | null;
       right: DiffLine | null;
+      context: string;
     }
   | { type: "notice"; key: string; file: DiffFile; text: string }
+  | { type: "thread"; key: string; file: DiffFile; view: ThreadView }
+  | { type: "composer"; key: string; file: DiffFile; selection: LineSelection }
   | { type: "file-gap"; key: string };
 
 /** 行の型ごとの高さ。CSS の変数と一致させる。 */
@@ -28,6 +39,9 @@ export const ROW_HEIGHT = {
   line: 24,
   split: 24,
   notice: 56,
+  // 可変。実測で置き換わるまでの見積もり。
+  thread: 120,
+  composer: 148,
   "file-gap": 16,
 } as const;
 
@@ -39,8 +53,11 @@ export function buildRows(
   files: DiffFile[],
   mode: ViewMode,
   collapsed: Set<string>,
+  threads: ThreadView[] = [],
+  selection: LineSelection | null = null,
 ): RowItem[] {
   const rows: RowItem[] = [];
+  const byFile = groupThreads(threads);
 
   for (const file of files) {
     const isCollapsed = collapsed.has(file.path);
@@ -61,7 +78,13 @@ export function buildRows(
           text: notice,
         });
       } else {
-        appendHunks(rows, file, mode);
+        appendHunks(
+          rows,
+          file,
+          mode,
+          byFile.get(file.path) ?? [],
+          selection?.file === file.path ? selection : null,
+        );
       }
     }
 
@@ -71,7 +94,46 @@ export function buildRows(
   return rows;
 }
 
-function appendHunks(rows: RowItem[], file: DiffFile, mode: ViewMode): void {
+function groupThreads(threads: ThreadView[]): Map<string, ThreadView[]> {
+  const map = new Map<string, ThreadView[]>();
+  for (const view of threads) {
+    const list = map.get(view.thread.file);
+    if (list) list.push(view);
+    else map.set(view.thread.file, [view]);
+  }
+  return map;
+}
+
+function appendHunks(
+  rows: RowItem[],
+  file: DiffFile,
+  mode: ViewMode,
+  threads: ThreadView[],
+  selection: LineSelection | null,
+): void {
+  /** 対象行の直後にスレッドと入力欄を差し込む。行との対応が視覚的に保たれる。 */
+  const attach = (side: Side, lineNo: number | null) => {
+    if (lineNo === null) return;
+    for (const view of threads) {
+      if (view.thread.side === side && view.thread.lineEnd === lineNo) {
+        rows.push({
+          type: "thread",
+          key: `${file.path}::t${view.thread.id}`,
+          file,
+          view,
+        });
+      }
+    }
+    if (selection && selection.side === side && selection.end === lineNo) {
+      rows.push({
+        type: "composer",
+        key: `${file.path}::composer`,
+        file,
+        selection,
+      });
+    }
+  };
+
   file.hunks.forEach((hunk, hi) => {
     rows.push({
       type: "hunk",
@@ -83,19 +145,32 @@ function appendHunks(rows: RowItem[], file: DiffFile, mode: ViewMode): void {
 
     if (mode === "unified") {
       hunk.lines.forEach((line, li) => {
-        rows.push({ type: "line", key: `${file.path}::h${hi}l${li}`, file, line });
+        rows.push({
+          type: "line",
+          key: `${file.path}::h${hi}l${li}`,
+          file,
+          line,
+          context: hunk.header,
+        });
+        attach("new", line.newNumber);
+        attach("old", line.oldNumber);
       });
       return;
     }
 
     hunk.rows.forEach((row, ri) => {
+      const left = row.left === null ? null : (hunk.lines[row.left] ?? null);
+      const right = row.right === null ? null : (hunk.lines[row.right] ?? null);
       rows.push({
         type: "split",
         key: `${file.path}::h${hi}r${ri}`,
         file,
-        left: row.left === null ? null : (hunk.lines[row.left] ?? null),
-        right: row.right === null ? null : (hunk.lines[row.right] ?? null),
+        left,
+        right,
+        context: hunk.header,
       });
+      attach("new", right?.newNumber ?? null);
+      attach("old", left?.oldNumber ?? null);
     });
   });
 }
@@ -120,28 +195,6 @@ export function fileHeaderIndex(rows: RowItem[]): Map<string, number> {
     if (row.type === "file-header") map.set(row.file.path, i);
   });
   return map;
-}
-
-/**
- * いちばん長い行の文字数。
- *
- * 仮想化した行は絶対配置なので、親の幅を押し広げない。横スクロールを
- * diff 全体で 1 本に保つため、内容の幅をここで測って親に持たせる。
- * 極端に長い行に引きずられないよう上限を設ける。
- */
-export function maxLineLength(files: DiffFile[], cap = 400): number {
-  let max = 40;
-  for (const file of files) {
-    for (const hunk of file.hunks) {
-      for (const line of hunk.lines) {
-        if (line.content.length > max) {
-          max = Math.min(line.content.length, cap);
-          if (max >= cap) return cap;
-        }
-      }
-    }
-  }
-  return max;
 }
 
 /** 行番号の最大桁数。gutter の幅を決める。 */

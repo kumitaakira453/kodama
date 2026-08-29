@@ -5,7 +5,11 @@ import type {
   DiffResponse,
   DiffSpec,
   Project,
+  PrInfo,
   RevisionList,
+  Thread,
+  ThreadInput,
+  ThreadView,
   WorktreeInfo,
   WorktreeStatus,
 } from "./types";
@@ -26,6 +30,9 @@ export const api = {
   worktreeStatuses: (projectId: string, paths: string[]) =>
     invoke<WorktreeStatus[]>("worktree_statuses", { projectId, paths }),
 
+  pullRequests: (projectId: string) =>
+    invoke<Record<string, PrInfo>>("pull_requests", { projectId }),
+
   listRevisions: (worktree: string, limit: number = REVISION_LIMIT) =>
     invoke<RevisionList>("list_revisions", { worktree, limit }),
 
@@ -37,4 +44,23 @@ export const api = {
     path: string,
     context: number,
   ) => invoke<DiffFile | null>("file_diff", { worktree, spec, path, context }),
+
+  listThreads: (
+    worktree: string | null,
+    revisionKey: string | null,
+    includeClosed = false,
+  ) =>
+    invoke<ThreadView[]>("list_threads", {
+      worktree,
+      revisionKey,
+      includeClosed,
+    }),
+  addThread: (input: ThreadInput) => invoke<Thread>("add_thread", { input }),
+  replyThread: (id: string, author: string, body: string) =>
+    invoke<Thread>("reply_thread", { id, author, body }),
+  resolveThread: (id: string, by: string) =>
+    invoke<Thread>("resolve_thread", { id, by }),
+  reopenThread: (id: string) => invoke<Thread>("reopen_thread", { id }),
+  dropThread: (id: string, by: string) =>
+    invoke<Thread>("drop_thread", { id, by }),
 };

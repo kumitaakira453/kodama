@@ -1,3 +1,4 @@
+pub mod gh;
 pub mod git;
 pub mod inline;
 pub mod patch;

@@ -5,6 +5,7 @@ import { api } from "../lib/ipc";
 import type { WorktreeStatus } from "../lib/types";
 import {
   projectsAtom,
+  pullRequestsAtom,
   selectedProjectIdAtom,
   selectedWorktreeAtom,
   statusesAtom,
@@ -22,6 +23,7 @@ export function useProjects() {
   const [projects, setProjects] = useAtom(projectsAtom);
   const [worktrees, setWorktrees] = useAtom(worktreesAtom);
   const setStatuses = useSetAtom(statusesAtom);
+  const setPullRequests = useSetAtom(pullRequestsAtom);
   const [projectId, setProjectId] = useAtom(selectedProjectIdAtom);
   const [worktree, setWorktree] = useAtom(selectedWorktreeAtom);
   const [loading, setLoading] = useState(true);
@@ -48,11 +50,16 @@ export function useProjects() {
           });
           return next;
         });
+
+        // PR は gh の実行が要るので最後に回す。無い環境では空で返る。
+        const prs = await api.pullRequests(id);
+        if (gen !== generation.current) return;
+        setPullRequests(prs);
       } catch (e) {
         if (gen === generation.current) showError(e);
       }
     },
-    [setWorktrees, setStatuses, showError],
+    [setWorktrees, setStatuses, setPullRequests, showError],
   );
 
   const reload = useCallback(async () => {

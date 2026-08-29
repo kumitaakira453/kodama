@@ -16,6 +16,14 @@ pub fn generate(seed: &str) -> String {
     format!("{millis:x}-{n:x}-{}", &hash(seed)[..8])
 }
 
+/// 8 桁 hex の短い ID。CLI で打ち、画面に `#a3f10000` と出すので短くする。
+/// 衝突しないことは呼び出し側が台帳と突き合わせて確かめる。
+pub fn short_id(seed: &str) -> String {
+    let millis = now_millis();
+    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+    hash(&format!("{millis}-{n}-{seed}"))[..8].to_string()
+}
+
 pub fn now_millis() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
