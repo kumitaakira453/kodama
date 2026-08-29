@@ -1,9 +1,8 @@
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom } from "jotai";
 
-import type { DiffResponse } from "../../lib/types";
+import type { DiffFile } from "../../lib/types";
 import {
   contextLinesAtom,
-  selectedFileAtom,
   viewModeAtom,
   wordDiffAtom,
   wrapLinesAtom,
@@ -18,21 +17,18 @@ const CONTEXT_STEPS = [3, 25, 100000];
 const CONTEXT_LABELS = ["変更のみ", "広め", "全体"];
 
 interface DiffPaneProps {
-  diff: DiffResponse | null;
+  file: DiffFile | null;
   loading: boolean;
   onOpenFile: (path: string, line: number | null) => void;
 }
 
-export function DiffPane({ diff, loading, onOpenFile }: DiffPaneProps) {
-  const selected = useAtomValue(selectedFileAtom);
+export function DiffPane({ file, loading, onOpenFile }: DiffPaneProps) {
   const [mode, setMode] = useAtom(viewModeAtom);
   const [wordDiff, setWordDiff] = useAtom(wordDiffAtom);
   const [wrap, setWrap] = useAtom(wrapLinesAtom);
   const [context, setContext] = useAtom(contextLinesAtom);
 
-  const file = diff?.files.find((f) => f.path === selected) ?? null;
-
-  if (loading && !diff) {
+  if (loading && !file) {
     return (
       <div className="kd-pane__loading">
         <RingSpinner size={26} />

@@ -4,8 +4,9 @@
 //! パーサが壊れないよう、書式に影響する設定は呼び出しごとに打ち消す。
 
 use crate::domain::models::{CommitInfo, WorktreeInfo};
+use crate::domain::spec::BlobRef;
 use crate::error::{KdError, KdResult};
-use crate::infra::shell::capture;
+use crate::infra::shell::{capture, capture_bytes};
 
 /// フィールド区切り。ファイル名やコミット本文に現れない制御文字を使う。
 const SEP: char = '\u{1f}';
@@ -265,7 +266,13 @@ impl Git {
     /// `-M` で rename を 1 件にまとめ、`--no-ext-diff` / `--no-textconv` で外部ツールと
     /// textconv を通さない。textconv 経由の出力は行番号が実ファイルと合わなくなる。
     /// マージコミットの combined diff（`@@@` の 3 列）は 2-way 指定なので現れない。
-    pub fn diff_patch(&self, worktree: &str, spec_args: &[String], context: u32) -> KdResult<String> {
+    pub fn diff_patch(
+        &self,
+        worktree: &str,
+        spec_args: &[String],
+        context: u32,
+        only: Option<&str>,
+    ) -> KdResult<String> {
         let unified = format!("-U{context}");
         let mut args: Vec<&str> = vec![
             "diff",
@@ -277,6 +284,11 @@ impl Git {
         ];
         for a in spec_args {
             args.push(a);
+        }
+        // rename では変更前後の両方を渡さないと差分が空になる。
+        if let Some(path) = only {
+            args.push("--");
+            args.push(path);
         }
         self.run(worktree, &args, true)
     }
@@ -317,6 +329,21 @@ impl Git {
         )
     }
 
+    /// 指定した側のファイル全文を読む。存在しない（新規・削除）なら None。
+    ///
+    /// バイナリや不正な UTF-8 は None にする。ハイライトも行分割もできない。
+    pub fn read_blob(&self, worktree: &str, blob: &BlobRef, path: &str) -> Option<String> {
+        let bytes = match blob {
+            BlobRef::Worktree => std::fs::read(std::path::Path::new(worktree).join(path)).ok()?,
+            BlobRef::Index => capture_blob(worktree, &format!(":{path}"))?,
+            BlobRef::Tree { rev } => capture_blob(worktree, &format!("{rev}:{path}"))?,
+        };
+        if bytes.contains(&0) {
+            return None;
+        }
+        String::from_utf8(bytes).ok()
+    }
+
     /// コミットの第 1 親。親が無い（最初のコミット）なら空ツリーを返す。
     pub fn first_parent(&self, worktree: &str, sha: &str) -> String {
         self.run(worktree, &["rev-parse", "--verify", "--quiet", &format!("{sha}^")], false)
@@ -325,6 +352,16 @@ impl Git {
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| EMPTY_TREE.to_string())
     }
+}
+
+/// `cat-file blob` の出力をバイト列で受ける。存在しない参照ではエラーになるので
+/// 終了コードは見ず、空なら None にする。
+fn capture_blob(worktree: &str, spec: &str) -> Option<Vec<u8>> {
+    let mut cmd: Vec<&str> = vec!["git", "-C", worktree];
+    cmd.extend_from_slice(&CONFIG_OVERRIDES);
+    cmd.extend_from_slice(&["cat-file", "blob", spec]);
+    let out = capture_bytes(&cmd, None, false).ok()?;
+    (!out.is_empty()).then_some(out)
 }
 
 fn basename(path: &str) -> String {

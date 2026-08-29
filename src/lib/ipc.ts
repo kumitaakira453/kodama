@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  DiffFile,
   DiffResponse,
   DiffSpec,
   Project,
@@ -30,4 +31,10 @@ export const api = {
 
   loadDiff: (worktree: string, spec: DiffSpec, context: number) =>
     invoke<DiffResponse>("load_diff", { worktree, spec, context }),
+  fileDiff: (
+    worktree: string,
+    spec: DiffSpec,
+    path: string,
+    context: number,
+  ) => invoke<DiffFile | null>("file_diff", { worktree, spec, path, context }),
 };

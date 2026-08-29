@@ -17,6 +17,7 @@ import { Toasts } from "./components/ui/Toasts";
 import { WorktreePane } from "./components/worktrees/WorktreePane";
 import { useDashboard } from "./hooks/useDashboard";
 import { useDiff } from "./hooks/useDiff";
+import { useFileDiff } from "./hooks/useFileDiff";
 import { usePaneResize } from "./hooks/usePaneResize";
 import { useRevisions } from "./hooks/useRevisions";
 import { useTheme } from "./hooks/useTheme";
@@ -27,6 +28,7 @@ import {
   commitSelectionAtom,
   filesWidthAtom,
   revisionsAtom,
+  selectedFileAtom,
   selectedWorktreeAtom,
   settingsOpenAtom,
   treeWidthAtom,
@@ -52,6 +54,7 @@ export default function App() {
   const revisions = useAtomValue(revisionsAtom);
   const selection = useAtomValue(commitSelectionAtom);
   const selectedWorktree = useAtomValue(selectedWorktreeAtom);
+  const selectedFile = useAtomValue(selectedFileAtom);
   const [dragging, setDragging] = useState(false);
 
   const spec = buildSpec(
@@ -60,6 +63,11 @@ export default function App() {
     revisions?.defaultBase ?? null,
   );
   const { diff, loading: diffLoading } = useDiff(spec);
+  // 一覧側の差分には色が付いていない。選択中のファイルだけを取り直し、
+  // 構文ハイライトが届いたら差し替える。
+  const listedFile =
+    diff?.files.find((f) => f.path === selectedFile) ?? null;
+  const shownFile = useFileDiff(spec, listedFile);
 
   const revealInWorktree = useCallback(
     (relativePath: string) => {
@@ -203,7 +211,7 @@ export default function App() {
 
         <section className="kd-pane kd-pane--diff">
           <DiffPane
-            diff={diff}
+            file={shownFile}
             loading={diffLoading}
             onOpenFile={(path) => revealInWorktree(path)}
           />

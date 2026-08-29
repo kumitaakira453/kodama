@@ -1,11 +1,13 @@
 //! 比較指定の解決と、差分の取得・構造化。
 
-use crate::domain::diff::{DiffFile, DiffFileStatus, DiffResponse};
+use crate::domain::diff::{DiffFile, DiffFileStatus, DiffHunk, DiffLineKind, DiffResponse};
 use crate::domain::ids;
 use crate::domain::rows::build_rows;
 use crate::domain::spec::{revision_key, BlobRef, DiffSpec, ResolvedSpec};
 use crate::error::{KdError, KdResult};
 use crate::infra::git::{Git, EMPTY_TREE};
+use crate::app::highlight;
+use crate::infra::inline;
 use crate::infra::patch::{parse_patch, ParsedFile};
 
 /// 1 ファイルの hunks を保持する上限。これを超えたら本文を捨てて truncated にする。
@@ -106,7 +108,7 @@ pub fn load(worktree: &str, spec: &DiffSpec, context: u32) -> KdResult<DiffRespo
     let resolved = resolve(worktree, spec)?;
     let git = Git::new(worktree);
 
-    let patch = git.diff_patch(worktree, &resolved.diff_args, context)?;
+    let patch = git.diff_patch(worktree, &resolved.diff_args, context, None)?;
     let mut files: Vec<DiffFile> = parse_patch(&patch).into_iter().map(to_dto).collect();
 
     if spec.includes_untracked() {
@@ -150,12 +152,13 @@ fn to_dto(parsed: ParsedFile) -> DiffFile {
     for hunk in &mut hunks {
         for line in &hunk.lines {
             match line.kind {
-                crate::domain::diff::DiffLineKind::Add => additions += 1,
-                crate::domain::diff::DiffLineKind::Del => deletions += 1,
-                crate::domain::diff::DiffLineKind::Context => {}
+                DiffLineKind::Add => additions += 1,
+                DiffLineKind::Del => deletions += 1,
+                DiffLineKind::Context => {}
             }
         }
         hunk.rows = build_rows(&hunk.lines);
+        apply_inline(hunk);
     }
 
     DiffFile {
@@ -170,6 +173,61 @@ fn to_dto(parsed: ParsedFile) -> DiffFile {
         truncated,
         diff_hash: ids::diff_hash(&parsed.raw),
         hunks,
+    }
+}
+
+/// 1 ファイルだけを取り直し、構文ハイライトを付ける。
+///
+/// ハイライトはファイル全文の読み出しと解析が要る。一覧の取得で全ファイル分を
+/// 走らせると変更が多い比較で待たされるので、選択されたファイルだけに絞る。
+pub fn load_file(
+    worktree: &str,
+    spec: &DiffSpec,
+    path: &str,
+    context: u32,
+) -> KdResult<Option<DiffFile>> {
+    let resolved = resolve(worktree, spec)?;
+    let git = Git::new(worktree);
+
+    let untracked = spec.includes_untracked() && is_untracked(&git, worktree, path);
+    let patch = if untracked {
+        git.untracked_patch(worktree, path, context)?
+    } else {
+        git.diff_patch(worktree, &resolved.diff_args, context, Some(path))?
+    };
+
+    let Some(mut file) = parse_patch(&patch).into_iter().map(to_dto).next() else {
+        return Ok(None);
+    };
+    // `--no-index` の出力は作業ツリー上のパスに解決されるので、呼ばれたパスに戻す。
+    file.path = path.to_string();
+    if untracked {
+        file.status = DiffFileStatus::Untracked;
+    }
+    highlight::apply(&git, worktree, &resolved, &mut file);
+    Ok(Some(file))
+}
+
+fn is_untracked(git: &Git, worktree: &str, path: &str) -> bool {
+    git.untracked_paths(worktree).iter().any(|p| p == path)
+}
+
+/// 対になった削除行と追加行に、行内で変化した範囲を書き込む。
+///
+/// 対応付けは `build_rows` が確定させたものをそのまま使う。ここで別の組み合わせを
+/// 作ると、split 表示で横に並んでいる行と強調範囲の算出元が食い違う。
+fn apply_inline(hunk: &mut DiffHunk) {
+    for row in hunk.rows.clone() {
+        let (Some(l), Some(r)) = (row.left, row.right) else {
+            continue;
+        };
+        if hunk.lines[l].kind != DiffLineKind::Del || hunk.lines[r].kind != DiffLineKind::Add {
+            continue;
+        }
+        let (old_ranges, new_ranges) =
+            inline::compute(&hunk.lines[l].content, &hunk.lines[r].content);
+        hunk.lines[l].inline = old_ranges;
+        hunk.lines[r].inline = new_ranges;
     }
 }
 

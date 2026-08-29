@@ -29,7 +29,7 @@ pub enum DiffLineKind {
 }
 
 /// 行内で変化した範囲。ここに含まれない範囲は反対側の行と一致している。
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InlineRange {
     pub start: u32,
