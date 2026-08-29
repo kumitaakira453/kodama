@@ -5,9 +5,7 @@ import { api } from "../lib/ipc";
 import { revisionsAtom, selectedWorktreeAtom } from "../state/atoms";
 import { useToast } from "./useToast";
 
-/**
- * 選択中 worktree のコミット一覧を読む。worktree を切り替えたら前の結果を捨てる。
- */
+/** 選択中 worktree のコミット一覧を読む。切り替えたら前の結果を捨てる。 */
 export function useRevisions() {
   const worktree = useAtomValue(selectedWorktreeAtom);
   const setRevisions = useSetAtom(revisionsAtom);

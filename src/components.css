@@ -1,5 +1,7 @@
 /* ==========================================================================
    レイアウト
+   スクロールを持つのは .kd-tree__body と .kd-canvas__scroll の 2 つだけ。
+   親も子もスクロールする状態を作らない。
    ========================================================================== */
 
 .kd-shell {
@@ -15,76 +17,40 @@
   height: 100%;
 }
 
-.kd-titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  height: var(--kd-titlebar-h);
-  padding: 0 12px 0 84px; /* 左は macOS の信号機ボタンを避ける */
-  background: var(--kd-panel);
-  border-bottom: 1px solid var(--kd-border);
-  user-select: none;
-}
-
-.kd-titlebar__brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.kd-titlebar__name {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--kd-fg-dim);
-}
-
-.kd-titlebar__actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.kd-panes {
+.kd-body {
   display: flex;
   min-height: 0;
   overflow: hidden;
 }
 
-.kd-pane {
-  min-height: 0;
-  overflow: auto;
+.kd-sidebar {
   flex: 0 0 auto;
-}
-
-.kd-pane--tree {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--kd-sidebar);
-}
-
-.kd-pane--files {
-  background: var(--kd-bg);
-  border-left: 1px solid var(--kd-border);
   border-right: 1px solid var(--kd-border);
 }
 
-.kd-pane--diff {
+.kd-main {
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   background: var(--kd-bg);
 }
 
 .kd-resizer {
-  flex: 0 0 6px;
+  flex: 0 0 5px;
+  margin-left: -5px;
   cursor: col-resize;
-  background: transparent;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .kd-resizer::after {
   content: "";
   position: absolute;
-  inset: 0 2px;
+  inset: 0 1px;
   background: transparent;
   transition: background var(--kd-dur-instant) var(--kd-ease-out);
 }
@@ -98,20 +64,858 @@
   transition: none !important;
 }
 
-.kd-placeholder {
+/* ==========================================================================
+   上部バー
+   ========================================================================== */
+
+.kd-topbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--kd-topbar-h);
+  padding: 0 12px 0 84px; /* 左は macOS の信号機ボタンを避ける */
+  background: var(--kd-panel);
+  border-bottom: 1px solid var(--kd-border);
+  user-select: none;
+}
+
+.kd-topbar__spacer {
+  flex: 1 1 auto;
+}
+
+.kd-topbar__stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 6px;
+  color: var(--kd-muted);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-add {
+  color: var(--kd-accent);
+}
+.kd-del {
+  color: var(--kd-danger);
+}
+
+/* ==========================================================================
+   ドロップダウン
+   ========================================================================== */
+
+.kd-dd {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.kd-dd__button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  padding: 6px 8px 6px 10px;
+  border: 1px solid var(--kd-border);
+  border-radius: var(--kd-radius-md);
+  background: var(--kd-elevated);
+  cursor: pointer;
+  transition:
+    background var(--kd-dur-instant) var(--kd-ease-out),
+    border-color var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-dd__button:hover {
+  border-color: var(--kd-border-strong);
+}
+
+.kd-dd__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.kd-dd__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  max-height: min(60vh, 520px);
+  overflow: auto;
+  padding: 5px;
+  border: 1px solid var(--kd-border-strong);
+  border-radius: var(--kd-radius-md);
+  background: var(--kd-elevated);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+  animation: kd-menu-in var(--kd-dur-instant) var(--kd-ease-out);
+  transform-origin: top left;
+}
+
+@keyframes kd-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.kd-menuitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-menuitem:hover {
+  background: var(--kd-hover);
+}
+
+.kd-menuitem[data-selected] {
+  color: var(--kd-accent);
+}
+
+.kd-menuitem__text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kd-menu__sep {
+  height: 1px;
+  margin: 5px 2px;
+  background: var(--kd-border);
+}
+
+.kd-chip {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--kd-hover);
+  color: var(--kd-muted);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+}
+
+/* ==========================================================================
+   比較対象のメニュー
+   ========================================================================== */
+
+.kd-revmenu__sep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 4px;
+  color: var(--kd-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.kd-revmenu__sep::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--kd-border);
+  order: 3;
+}
+
+.kd-revmenu__badge {
+  order: 2;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kd-accent) 20%, transparent);
+  color: var(--kd-accent);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-revmenu__list {
+  max-height: 300px;
+  overflow: auto;
+}
+
+.kd-revmenu__note,
+.kd-revmenu__hint {
+  margin: 0;
+  padding: 8px;
+  color: var(--kd-muted);
+  font-size: 11px;
+}
+
+.kd-revmenu__hint {
+  border-top: 1px solid var(--kd-border);
+  margin-top: 4px;
+}
+
+.kd-revrow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-revrow:hover {
+  background: var(--kd-hover);
+}
+
+.kd-revrow[data-selected] {
+  background: color-mix(in srgb, var(--kd-accent) 12%, transparent);
+}
+
+.kd-revrow[data-empty] {
+  opacity: 0.45;
+}
+
+.kd-revrow__box {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  align-self: stretch;
+  color: var(--kd-muted);
+  cursor: pointer;
+}
+
+.kd-revrow[data-selected] .kd-revrow__box {
+  color: var(--kd-accent);
+}
+
+.kd-revrow__box input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--kd-accent);
+  cursor: pointer;
+}
+
+.kd-revrow__body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 8px 6px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.kd-revrow__icon {
+  color: var(--kd-muted);
+}
+
+.kd-revrow__sha {
+  flex: 0 0 auto;
+  font-family: var(--kd-font-mono);
+  font-size: 11px;
+  color: var(--kd-muted);
+}
+
+.kd-revrow[data-selected] .kd-revrow__sha {
+  color: var(--kd-accent);
+}
+
+.kd-revrow__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
+.kd-revrow__meta {
+  flex: 0 0 auto;
+  padding-right: 8px;
+  color: var(--kd-muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   左ペイン: ファイルツリー
+   ========================================================================== */
+
+.kd-tree {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.kd-tree__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin: 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--kd-border);
+  border-radius: var(--kd-radius-md);
+  background: var(--kd-elevated);
+  color: var(--kd-muted);
+}
+
+.kd-tree__head:focus-within {
+  border-color: var(--kd-accent);
+}
+
+.kd-tree__search {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kd-fg);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.kd-tree__search::placeholder {
+  color: var(--kd-muted);
+}
+
+.kd-tree__clear {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.kd-tree__clear:hover {
+  background: var(--kd-hover);
+}
+
+/* スクロールを持つのはここ。 */
+.kd-tree__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 24px;
+}
+
+.kd-tree__note {
+  margin: 0;
+  padding: 14px 16px;
+  color: var(--kd-muted);
+  font-size: 11.5px;
+}
+
+.kd-tree__generated {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--kd-border);
+}
+
+.kd-dir {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 5px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--kd-fg-dim);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-dir:hover {
+  background: var(--kd-hover);
+}
+
+.kd-dir__folder {
+  color: color-mix(in srgb, var(--kd-accent) 70%, var(--kd-muted));
+}
+
+.kd-dir__name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.kd-dir__count {
+  color: var(--kd-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-file {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-file:hover {
+  background: var(--kd-hover);
+}
+
+.kd-file[data-active] {
+  background: var(--kd-active);
+}
+
+/* 選択中を示す幹。上から伸びる。 */
+.kd-file[data-active]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--kd-accent);
+}
+
+.kd-file__mark {
+  flex: 0 0 auto;
+  width: 13px;
+  text-align: center;
+  font-family: var(--kd-font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--kd-muted);
+}
+
+.kd-file__mark--added,
+.kd-file__mark--untracked {
+  color: var(--kd-accent);
+}
+.kd-file__mark--deleted {
+  color: var(--kd-danger);
+}
+.kd-file__mark--renamed,
+.kd-file__mark--copied {
+  color: var(--kd-accent-2);
+}
+
+.kd-file__name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.kd-file__counts {
+  display: flex;
+  gap: 5px;
+  flex: 0 0 auto;
+  font-family: var(--kd-font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-file__binary {
+  flex: 0 0 auto;
+  color: var(--kd-muted);
+  font-size: 10px;
+}
+
+/* ==========================================================================
+   diff の本体
+   ========================================================================== */
+
+.kd-canvas {
+  position: relative;
+  height: 100%;
+}
+
+.kd-canvas__center {
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 4px;
+  gap: 10px;
   height: 100%;
+  padding: 24px;
   color: var(--kd-muted);
   text-align: center;
 }
 
-.kd-placeholder small {
-  font-size: 11px;
-  opacity: 0.75;
+.kd-canvas__empty {
+  animation: kd-fade-in var(--kd-dur-slow) var(--kd-ease-out);
 }
+
+.kd-canvas__empty p {
+  margin: 0;
+}
+
+.kd-canvas__empty small {
+  font-family: var(--kd-font-mono);
+  font-size: 10.5px;
+  opacity: 0.8;
+}
+
+/* 仮想化した行に sticky は効かないので、見出しは別レイヤーで重ねる。 */
+.kd-canvas__pin {
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+/* スクロールを持つのはここ。横も縦もこの 1 つで受ける。 */
+.kd-canvas__scroll {
+  height: 100%;
+  overflow: auto;
+  padding: 0 16px 48px;
+  font-family: var(--kd-font-mono);
+  font-size: var(--kd-code-size);
+  line-height: var(--kd-line-h);
+  /* 等幅でも合字が入ると != が ≠ になり、diff の読み違いを生む。 */
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0, "liga" 0;
+
+  --kd-cols-unified: var(--kd-gutter) var(--kd-gutter) var(--kd-sign-w)
+    minmax(0, 1fr);
+  --kd-cols-split: var(--kd-gutter) var(--kd-sign-w) minmax(0, 1fr)
+    var(--kd-gutter) var(--kd-sign-w) minmax(0, 1fr);
+}
+
+.kd-canvas__spacer {
+  position: relative;
+  /* 仮想化した行は絶対配置で親の幅を押し広げないため、内容の幅をここで持つ。
+     こうしないと長い行が見切れるか、行ごとに横スクロールが生えてしまう。 */
+  min-width: calc(
+    var(--kd-gutter) * 2 + var(--kd-sign-w) + var(--kd-columns) * 1ch +
+      var(--kd-code-pad) * 2
+  );
+}
+
+.kd-canvas__slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+/* スクロール中は行 DOM が再利用されるので、色が補間され続けないよう止める。 */
+.kd-canvas__scroll[data-scrolling] .kd-row,
+.kd-canvas__scroll[data-scrolling] .kd-row * {
+  transition: none !important;
+}
+
+/* ---- ファイルカード ---- */
+
+.kd-fhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 10px 0 4px;
+  border: 1px solid var(--kd-border);
+  border-radius: var(--kd-radius-sm) var(--kd-radius-sm) 0 0;
+  background: var(--kd-panel);
+  font-family: var(--kd-font-sans);
+  font-size: 12.5px;
+}
+
+.kd-fhead[data-pinned] {
+  border-radius: var(--kd-radius-sm) var(--kd-radius-sm) 0 0;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+}
+
+.kd-fhead__toggle,
+.kd-fhead__action {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: var(--kd-muted);
+  cursor: pointer;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-fhead__toggle:hover,
+.kd-fhead__action:hover {
+  background: var(--kd-hover);
+  color: var(--kd-fg);
+}
+
+.kd-fhead__path {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--kd-font-mono);
+  font-size: 12px;
+  direction: rtl; /* 長いパスは先頭を省略して末尾を残す */
+  text-align: left;
+}
+
+.kd-fhead__path > * {
+  direction: ltr;
+}
+
+.kd-fhead__dir {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--kd-muted);
+}
+
+.kd-fhead__name {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+.kd-fhead__old {
+  color: var(--kd-muted);
+  text-decoration: line-through;
+}
+
+.kd-fhead__stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  font-family: var(--kd-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-bar {
+  display: flex;
+  gap: 1px;
+}
+
+.kd-bar__b {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--kd-border-strong);
+}
+.kd-bar__b--add {
+  background: var(--kd-accent);
+}
+.kd-bar__b--del {
+  background: var(--kd-danger);
+}
+
+/* カードの下端。角を丸めて閉じ、残りを次のカードとの余白にする。 */
+.kd-gap {
+  height: 100%;
+  padding-bottom: 8px;
+}
+
+.kd-gap::before {
+  content: "";
+  display: block;
+  height: 8px;
+  border: 1px solid var(--kd-border);
+  border-top: 0;
+  border-radius: 0 0 var(--kd-radius-sm) var(--kd-radius-sm);
+}
+
+.kd-notice {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border-left: 1px solid var(--kd-border);
+  border-right: 1px solid var(--kd-border);
+  color: var(--kd-muted);
+  font-family: var(--kd-font-sans);
+  font-size: 12px;
+}
+
+/* ---- 行 ---- */
+
+.kd-row {
+  display: grid;
+  grid-template-columns: var(--kd-cols-unified);
+  align-items: center;
+  height: 100%;
+  border-left: 1px solid var(--kd-border);
+  border-right: 1px solid var(--kd-border);
+  white-space: pre;
+}
+
+.kd-canvas__scroll[data-mode="split"] .kd-row--split {
+  grid-template-columns: var(--kd-cols-split);
+}
+
+.kd-canvas__scroll[data-wrap] .kd-row {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.kd-row[data-kind="add"] {
+  background: var(--kd-diff-add-bg);
+}
+.kd-row[data-kind="del"] {
+  background: var(--kd-diff-del-bg);
+}
+
+/* 行番号セルは行の背景より濃くする。GitHub と同じ濃淡構造。 */
+.kd-row[data-kind="add"] .kd-num {
+  background: var(--kd-diff-add-num);
+}
+.kd-row[data-kind="del"] .kd-num {
+  background: var(--kd-diff-del-num);
+}
+
+/* split は行ではなく片側ずつ色を付ける。 */
+.kd-num[data-kind="add"] {
+  background: var(--kd-diff-add-num);
+}
+.kd-num[data-kind="del"] {
+  background: var(--kd-diff-del-num);
+}
+.kd-sign[data-kind="add"],
+.kd-code[data-kind="add"] {
+  background: var(--kd-diff-add-bg);
+}
+.kd-sign[data-kind="del"],
+.kd-code[data-kind="del"] {
+  background: var(--kd-diff-del-bg);
+}
+
+/* 行内差分は背景だけを濃くし、文字色はトークンに任せる。
+   文字色 = 構文、背景 = 差分、という 2 層に分けてあるので競合しない。 */
+.kd-row[data-kind="add"] [data-emph],
+.kd-code[data-kind="add"] [data-emph] {
+  background: var(--kd-diff-add-emph);
+  border-radius: 3px;
+}
+.kd-row[data-kind="del"] [data-emph],
+.kd-code[data-kind="del"] [data-emph] {
+  background: var(--kd-diff-del-emph);
+  border-radius: 3px;
+}
+
+/* 沈めたトークンは強調帯の上で読めなくなるので、そこだけ本文色へ戻す。 */
+.kd-t-comment[data-emph],
+.kd-t-punctuation[data-emph] {
+  color: var(--kd-fg-code);
+  font-style: normal;
+}
+
+.kd-num {
+  height: 100%;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  color: var(--kd-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.kd-sign {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--kd-muted);
+  user-select: none;
+}
+
+.kd-code {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding-right: var(--kd-code-pad);
+}
+
+.kd-code--empty {
+  background: color-mix(in srgb, var(--kd-muted) 7%, transparent);
+}
+
+.kd-num--empty,
+.kd-sign--empty {
+  background: color-mix(in srgb, var(--kd-muted) 7%, transparent);
+}
+
+.kd-nonewline {
+  margin-left: 6px;
+  color: var(--kd-accent-2);
+  opacity: 0.8;
+}
+
+.kd-row--hunk {
+  grid-template-columns: calc(var(--kd-gutter) * 2 + var(--kd-sign-w)) minmax(0, 1fr);
+  background: var(--kd-diff-hunk);
+  color: var(--kd-muted);
+  border-top: 1px solid var(--kd-border);
+  border-bottom: 1px solid var(--kd-border);
+}
+
+.kd-row__expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--kd-muted);
+  opacity: 0.6;
+}
+
+.kd-row__expand .material-symbols-rounded {
+  font-size: 16px;
+}
+
+.kd-hunk__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+}
+
+/* 構文トークンの色。テーマの切替は変数の差し替えだけで済む。 */
+.kd-t-keyword { color: var(--kd-t-keyword); }
+.kd-t-string { color: var(--kd-t-string); }
+.kd-t-comment { color: var(--kd-t-comment); font-style: italic; }
+.kd-t-number { color: var(--kd-t-number); }
+.kd-t-function { color: var(--kd-t-function); }
+.kd-t-type { color: var(--kd-t-type); }
+.kd-t-variable { color: var(--kd-t-variable); }
+.kd-t-constant { color: var(--kd-t-constant); }
+.kd-t-operator { color: var(--kd-t-operator); }
+.kd-t-punctuation { color: var(--kd-t-punctuation); }
+.kd-t-tag { color: var(--kd-t-tag); }
+.kd-t-attribute { color: var(--kd-t-attribute); }
 
 /* ==========================================================================
    ボタン
@@ -143,12 +947,12 @@
 .kd-btn--primary {
   background: var(--kd-accent);
   border-color: transparent;
-  color: var(--kd-c-bark-900);
+  color: #fff;
   font-weight: 600;
 }
 
 .kd-btn--primary:hover {
-  background: color-mix(in srgb, var(--kd-accent) 88%, white);
+  background: color-mix(in srgb, var(--kd-accent) 88%, black);
 }
 
 .kd-btn--danger {
@@ -161,6 +965,7 @@
   place-items: center;
   width: 30px;
   height: 30px;
+  flex: 0 0 auto;
   border: 0;
   border-radius: var(--kd-radius-sm);
   background: transparent;
@@ -185,117 +990,17 @@
   color: var(--kd-accent);
 }
 
+.kd-iconbtn--danger:hover {
+  color: var(--kd-danger);
+}
+
 .kd-kbd {
   margin-left: 6px;
   padding: 1px 5px;
   border-radius: 4px;
-  background: rgb(0 0 0 / 0.18);
+  background: rgb(0 0 0 / 0.14);
   font-family: var(--kd-font-mono);
   font-size: 10px;
-}
-
-/* ==========================================================================
-   プロジェクト切替
-   ========================================================================== */
-
-.kd-switcher {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.kd-switcher__button {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 8px 5px 6px;
-  border: 1px solid transparent;
-  border-radius: var(--kd-radius-md);
-  background: transparent;
-  cursor: pointer;
-  transition:
-    background var(--kd-dur-instant) var(--kd-ease-out),
-    border-color var(--kd-dur-instant) var(--kd-ease-out);
-}
-
-.kd-switcher__button:hover {
-  background: var(--kd-hover);
-  border-color: var(--kd-border);
-}
-
-.kd-switcher__name {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
-}
-
-.kd-switcher__menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 20;
-  min-width: 260px;
-  padding: 5px;
-  border: 1px solid var(--kd-border-strong);
-  border-radius: var(--kd-radius-md);
-  background: var(--kd-elevated);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.32);
-  animation: kd-menu-in var(--kd-dur-instant) var(--kd-ease-out);
-  transform-origin: top left;
-}
-
-@keyframes kd-menu-in {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-}
-
-.kd-switcher__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 7px 8px;
-  border: 0;
-  border-radius: var(--kd-radius-sm);
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--kd-dur-instant) var(--kd-ease-out);
-}
-
-.kd-switcher__item:hover {
-  background: var(--kd-hover);
-}
-
-.kd-switcher__item[aria-selected="true"] {
-  color: var(--kd-accent);
-}
-
-.kd-switcher__itemname {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kd-switcher__sep {
-  height: 1px;
-  margin: 5px 2px;
-  background: var(--kd-border);
-}
-
-.kd-titlebar__spec {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-  color: var(--kd-muted);
-  font-size: 11.5px;
 }
 
 /* ==========================================================================
@@ -308,7 +1013,7 @@
   z-index: 40;
   display: grid;
   place-items: center;
-  background: rgb(0 0 0 / 0.42);
+  background: rgb(0 0 0 / 0.35);
   animation: kd-fade-in var(--kd-dur-fast) var(--kd-ease-out);
 }
 
@@ -320,7 +1025,7 @@
   border: 1px solid var(--kd-border-strong);
   border-radius: var(--kd-radius-lg);
   background: var(--kd-elevated);
-  box-shadow: 0 24px 60px rgb(0 0 0 / 0.4);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.28);
   animation: kd-modal-in var(--kd-dur-fast) var(--kd-ease-out);
 }
 
@@ -410,833 +1115,6 @@
   color: var(--kd-muted);
   text-align: center;
 }
-
-.kd-iconbtn--danger:hover {
-  color: var(--kd-danger);
-}
-
-/* ==========================================================================
-   左ペイン: worktree
-   ========================================================================== */
-
-.kd-wtpane {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.kd-wtpane__head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px var(--kd-row-px);
-  color: var(--kd-muted);
-  border-bottom: 1px solid var(--kd-border);
-}
-
-.kd-wtpane__search {
-  flex: 1 1 auto;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  color: var(--kd-fg);
-  font: inherit;
-  font-size: 12px;
-  outline: none;
-}
-
-.kd-wtpane__search::placeholder {
-  color: var(--kd-muted);
-}
-
-.kd-wtpane__clear {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-
-.kd-wtpane__clear:hover {
-  background: var(--kd-hover);
-}
-
-.kd-wtpane__list {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: 6px 0 24px;
-}
-
-.kd-pane__note {
-  margin: 0;
-  padding: 14px 16px;
-  color: var(--kd-muted);
-  font-size: 11.5px;
-}
-
-.kd-pane__note--center {
-  display: grid;
-  place-content: center;
-  height: 100%;
-  text-align: center;
-}
-
-.kd-pane__loading {
-  display: grid;
-  place-items: center;
-  height: 100%;
-}
-
-/* worktree の行。枝分かれの縦線を左に引く。 */
-.kd-wt {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas:
-    "branch meta"
-    "subject subject";
-  gap: 2px 8px;
-  width: 100%;
-  padding: var(--kd-row-py) var(--kd-row-px) var(--kd-row-py) 22px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--kd-dur-instant) var(--kd-ease-out);
-}
-
-.kd-wt::before {
-  content: "";
-  position: absolute;
-  left: 11px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--kd-border);
-}
-
-.kd-wt:hover {
-  background: var(--kd-hover);
-}
-
-.kd-wt[data-selected] {
-  background: var(--kd-active);
-}
-
-/* 選択中を示す幹。上から伸びる。 */
-.kd-trunk {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--kd-accent);
-  transform: scaleY(0);
-  transform-origin: top;
-  transition: transform var(--kd-dur-fast) var(--kd-ease-spring);
-}
-
-.kd-wt[data-selected] .kd-trunk {
-  transform: scaleY(1);
-}
-
-.kd-wt__branch {
-  grid-area: branch;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-}
-
-.kd-wt__icon {
-  color: var(--kd-muted);
-  flex: 0 0 auto;
-}
-
-.kd-wt__label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12.5px;
-}
-
-.kd-wt[data-selected] .kd-wt__label {
-  color: var(--kd-fg);
-  font-weight: 600;
-}
-
-.kd-chip {
-  flex: 0 0 auto;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--kd-hover);
-  font-size: 9.5px;
-  letter-spacing: 0.04em;
-  color: var(--kd-muted);
-}
-
-.kd-wt__meta {
-  grid-area: meta;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--kd-muted);
-  font-size: 10.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-.kd-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--kd-accent-2);
-}
-
-.kd-count {
-  color: var(--kd-fg-dim);
-}
-
-.kd-wt__error {
-  color: var(--kd-danger);
-}
-
-/* 状態がまだ届いていない間の控えめなプレースホルダ。 */
-.kd-wt__pending {
-  width: 28px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--kd-border);
-}
-
-.kd-wt__subject {
-  grid-area: subject;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--kd-muted);
-  font-size: 11px;
-}
-
-/* ==========================================================================
-   中ペイン: コミット一覧 + 変更ファイル
-   ========================================================================== */
-
-.kd-pane--mid {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.kd-pane__top {
-  flex: 0 0 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.kd-pane__bottom {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-}
-
-.kd-hresizer {
-  flex: 0 0 6px;
-  cursor: row-resize;
-  position: relative;
-  z-index: 1;
-}
-
-.kd-hresizer::after {
-  content: "";
-  position: absolute;
-  inset: 2px 0;
-  background: var(--kd-border);
-  transition: background var(--kd-dur-instant) var(--kd-ease-out);
-}
-
-.kd-hresizer:hover::after {
-  background: var(--kd-accent);
-}
-
-.kd-commits {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.kd-commits__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px var(--kd-row-px) 9px;
-  border-bottom: 1px solid var(--kd-border);
-  color: var(--kd-muted);
-}
-
-.kd-commits__title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.kd-commits__badge {
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--kd-accent) 22%, transparent);
-  color: var(--kd-accent);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-}
-
-.kd-commits__hint {
-  margin-left: auto;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font-size: 10px;
-  cursor: pointer;
-  opacity: 0.75;
-}
-
-.kd-commits__hint:hover {
-  opacity: 1;
-  text-decoration: underline;
-}
-
-.kd-commits__list {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding-bottom: 8px;
-}
-
-.kd-commits__sep {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 10px 4px;
-  color: var(--kd-muted);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-}
-
-.kd-commits__sep::after {
-  content: "";
-  flex: 1 1 auto;
-  height: 1px;
-  background: var(--kd-border);
-}
-
-/* コミット / 疑似エントリの行。チェックは範囲の伸縮、行本体は単独選択。 */
-.kd-crow {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  transition: background var(--kd-dur-instant) var(--kd-ease-out);
-}
-
-.kd-check {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 30px;
-  align-self: stretch;
-  cursor: pointer;
-}
-
-.kd-check input {
-  width: 14px;
-  height: 14px;
-  margin: 0;
-  accent-color: var(--kd-accent);
-  cursor: pointer;
-}
-
-.kd-crow__body {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: var(--kd-row-py) var(--kd-row-px) var(--kd-row-py) 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.kd-crow:hover {
-  background: var(--kd-hover);
-}
-
-.kd-crow[data-selected] {
-  background: var(--kd-active);
-}
-
-/* 選択中の行は幹でつながる。範囲の途中も含めて 1 本の線に見える。 */
-.kd-crow[data-selected] .kd-trunk {
-  transform: scaleY(1);
-}
-
-.kd-crow[data-empty] {
-  opacity: 0.45;
-}
-
-.kd-crow__icon {
-  color: var(--kd-muted);
-}
-
-.kd-crow__sha {
-  font-family: var(--kd-font-mono);
-  font-size: 11px;
-  color: var(--kd-muted);
-}
-
-.kd-crow[data-selected] .kd-crow__sha {
-  color: var(--kd-accent);
-}
-
-.kd-crow__subject {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12.5px;
-}
-
-.kd-crow__meta {
-  color: var(--kd-muted);
-  font-size: 10.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ==========================================================================
-   変更ファイル一覧
-   ========================================================================== */
-
-.kd-filepane {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.kd-filepane__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px var(--kd-row-px) 9px;
-  border-bottom: 1px solid var(--kd-border);
-  color: var(--kd-muted);
-  font-size: 11px;
-}
-
-.kd-filepane__stat {
-  display: flex;
-  gap: 8px;
-  font-family: var(--kd-font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.kd-filepane__list {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: 6px 0 20px;
-}
-
-.kd-filetree {
-  min-width: max-content;
-}
-
-.kd-dir {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-  padding: 6px var(--kd-row-px) 6px 10px;
-  border: 0;
-  background: transparent;
-  color: var(--kd-muted);
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--kd-dur-instant) var(--kd-ease-out);
-}
-
-.kd-dir:hover {
-  background: var(--kd-hover);
-}
-
-.kd-dir__name {
-  flex: 1 1 auto;
-  white-space: nowrap;
-  font-size: 11.5px;
-}
-
-.kd-dir__count {
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.7;
-}
-
-.kd-file {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: 100%;
-  padding: 6px var(--kd-row-px) 6px 10px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--kd-dur-instant) var(--kd-ease-out);
-}
-
-.kd-file:hover {
-  background: var(--kd-hover);
-}
-
-.kd-file[data-selected] {
-  background: var(--kd-active);
-}
-
-.kd-file[data-selected] .kd-trunk {
-  transform: scaleY(1);
-}
-
-.kd-file__mark {
-  flex: 0 0 auto;
-  width: 14px;
-  text-align: center;
-  font-family: var(--kd-font-mono);
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--kd-muted);
-}
-
-.kd-file__mark--added,
-.kd-file__mark--untracked {
-  color: var(--kd-accent);
-}
-.kd-file__mark--deleted {
-  color: var(--kd-danger);
-}
-.kd-file__mark--renamed,
-.kd-file__mark--copied {
-  color: var(--kd-accent-2);
-}
-
-.kd-file__name {
-  flex: 1 1 auto;
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-.kd-file__counts {
-  display: flex;
-  gap: 6px;
-  flex: 0 0 auto;
-  font-family: var(--kd-font-mono);
-  font-size: 10.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-.kd-file__add {
-  color: var(--kd-accent);
-}
-.kd-file__del {
-  color: var(--kd-danger);
-}
-
-.kd-file__binary {
-  flex: 0 0 auto;
-  color: var(--kd-muted);
-  font-size: 10px;
-}
-
-.kd-nochanges,
-.kd-nofile {
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 10px;
-  height: 100%;
-  padding: 24px;
-  color: var(--kd-muted);
-  text-align: center;
-  animation: kd-fade-in var(--kd-dur-slow) var(--kd-ease-out);
-}
-
-.kd-nochanges p,
-.kd-nofile p {
-  margin: 0;
-}
-
-.kd-nochanges small {
-  font-family: var(--kd-font-mono);
-  font-size: 10.5px;
-  opacity: 0.75;
-}
-
-/* ==========================================================================
-   diff
-   ========================================================================== */
-
-.kd-diffpane {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.kd-difftool {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 10px 10px var(--kd-code-pad);
-  border-bottom: 1px solid var(--kd-border);
-  background: var(--kd-panel);
-}
-
-.kd-difftool__path {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--kd-font-mono);
-  font-size: 12px;
-}
-
-.kd-difftool__old {
-  color: var(--kd-muted);
-  text-decoration: line-through;
-}
-
-.kd-difftool__stat {
-  display: flex;
-  gap: 8px;
-  flex: 0 0 auto;
-  font-family: var(--kd-font-mono);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.kd-difftool__actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: 0 0 auto;
-}
-
-.kd-seg {
-  padding: 4px 10px;
-  border: 1px solid var(--kd-border-strong);
-  border-radius: var(--kd-radius-sm);
-  background: transparent;
-  color: var(--kd-fg-dim);
-  font-size: 11px;
-  cursor: pointer;
-  transition: background var(--kd-dur-instant) var(--kd-ease-out);
-}
-
-.kd-seg:hover {
-  background: var(--kd-hover);
-}
-
-.kd-notice {
-  padding: 24px;
-  color: var(--kd-muted);
-  text-align: center;
-}
-
-.kd-diff {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding-bottom: 40px;
-  font-family: var(--kd-font-mono);
-  font-size: var(--kd-code-size);
-  line-height: var(--kd-line-h);
-  /* 等幅でも合字が入ると != が ≠ になり、diff の読み違いを生む。 */
-  font-variant-ligatures: none;
-  font-feature-settings: "calt" 0, "liga" 0;
-  --kd-cols-unified: var(--kd-gutter) var(--kd-gutter) var(--kd-sign-w)
-    minmax(0, 1fr);
-  --kd-cols-split: var(--kd-gutter) var(--kd-sign-w) minmax(0, 1fr)
-    var(--kd-gutter) var(--kd-sign-w) minmax(0, 1fr);
-}
-
-.kd-diff__spacer {
-  position: relative;
-  width: 100%;
-}
-
-.kd-diff__slot {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-}
-
-.kd-diff-row {
-  display: grid;
-  grid-template-columns: var(--kd-cols-unified);
-  align-items: center;
-  width: max-content;
-  min-width: 100%;
-  height: var(--kd-line-h);
-  white-space: pre;
-}
-
-.kd-diff[data-mode="split"] .kd-diff-row--split {
-  grid-template-columns: var(--kd-cols-split);
-}
-
-/* 折り返しを有効にすると行高が可変になる。仮想化は切ってある。 */
-.kd-diff[data-wrap] .kd-diff-row {
-  height: auto;
-  min-height: var(--kd-line-h);
-  white-space: pre-wrap;
-  word-break: break-word;
-  align-items: start;
-}
-
-/* 仮想化は行 DOM を再利用するので、スクロール中に色が補間され続けると濁る。 */
-.kd-diff[data-scrolling] .kd-diff-row,
-.kd-diff[data-scrolling] .kd-diff-row * {
-  transition: none !important;
-}
-
-.kd-diff-row[data-kind="add"] {
-  background: var(--kd-diff-add-bg);
-}
-.kd-diff-row[data-kind="del"] {
-  background: var(--kd-diff-del-bg);
-}
-
-/* split は行ではなく片側ずつ色を付ける。 */
-.kd-num[data-kind="add"],
-.kd-sign[data-kind="add"],
-.kd-cell[data-kind="add"] {
-  background: var(--kd-diff-add-bg);
-}
-.kd-num[data-kind="del"],
-.kd-sign[data-kind="del"],
-.kd-cell[data-kind="del"] {
-  background: var(--kd-diff-del-bg);
-}
-
-/* 行内差分は背景だけを濃くし、文字色はトークンに任せる。
-   文字色 = 構文、背景 = 差分、という 2 層に分けてあるので競合しない。 */
-.kd-diff-row[data-kind="add"] [data-emph],
-.kd-cell[data-kind="add"] [data-emph] {
-  background: var(--kd-diff-add-emph);
-  border-radius: 3px;
-}
-.kd-diff-row[data-kind="del"] [data-emph],
-.kd-cell[data-kind="del"] [data-emph] {
-  background: var(--kd-diff-del-emph);
-  border-radius: 3px;
-}
-
-/* 沈めたトークンは強調帯の上で読めなくなるので、そこだけ本文色へ戻す。 */
-.kd-t-comment[data-emph],
-.kd-t-punctuation[data-emph] {
-  color: var(--kd-fg-code);
-  font-style: normal;
-}
-
-.kd-num {
-  padding-right: 8px;
-  text-align: right;
-  color: var(--kd-muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  user-select: none;
-  position: sticky;
-  left: 0;
-  background: var(--kd-bg);
-}
-
-.kd-diff-row[data-kind="add"] .kd-num {
-  background: transparent;
-}
-.kd-diff-row[data-kind="del"] .kd-num {
-  background: transparent;
-}
-
-.kd-sign {
-  text-align: center;
-  color: var(--kd-muted);
-  user-select: none;
-}
-
-.kd-cell,
-.kd-code {
-  min-width: 0;
-  padding-right: var(--kd-code-pad);
-  padding-left: 4px;
-}
-
-.kd-code--empty {
-  background: color-mix(in srgb, var(--kd-muted) 6%, transparent);
-}
-
-.kd-nonewline {
-  margin-left: 6px;
-  color: var(--kd-accent-2);
-  opacity: 0.8;
-}
-
-.kd-diff-row--hunk {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 var(--kd-code-pad);
-  background: color-mix(in srgb, var(--kd-muted) 10%, transparent);
-  color: var(--kd-muted);
-  border-top: 1px solid var(--kd-border);
-  border-bottom: 1px solid var(--kd-border);
-}
-
-.kd-hunk__range {
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.kd-hunk__ctx {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0.8;
-}
-
-/* 構文トークンの色。テーマの切替は変数の差し替えだけで済む。 */
-.kd-t-keyword { color: var(--kd-t-keyword); }
-.kd-t-string { color: var(--kd-t-string); }
-.kd-t-comment { color: var(--kd-t-comment); font-style: italic; }
-.kd-t-number { color: var(--kd-t-number); }
-.kd-t-function { color: var(--kd-t-function); }
-.kd-t-type { color: var(--kd-t-type); }
-.kd-t-variable { color: var(--kd-t-variable); }
-.kd-t-constant { color: var(--kd-t-constant); }
-.kd-t-operator { color: var(--kd-t-operator); }
-.kd-t-punctuation { color: var(--kd-t-punctuation); }
-.kd-t-tag { color: var(--kd-t-tag); }
-.kd-t-attribute { color: var(--kd-t-attribute); }
 
 /* ==========================================================================
    空状態: 初回起動
@@ -1436,7 +1314,7 @@
   border: 1px solid var(--kd-border-strong);
   border-radius: var(--kd-radius-md);
   background: var(--kd-elevated);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.28);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
   animation: kd-toast-in var(--kd-dur-fast) var(--kd-ease-out);
 }
 

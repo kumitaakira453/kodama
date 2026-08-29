@@ -68,6 +68,52 @@
    ========================================================================== */
 
 :root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --kd-bg: var(--kd-c-paper-50);
+  --kd-sidebar: var(--kd-c-paper-200);
+  --kd-panel: var(--kd-c-paper-100);
+  --kd-elevated: #ffffff;
+
+  --kd-border: rgb(60 50 30 / 0.14);
+  --kd-border-strong: rgb(60 50 30 / 0.24);
+  --kd-hover: rgb(60 50 30 / 0.045);
+  --kd-active: rgb(60 50 30 / 0.085);
+
+  --kd-fg: var(--kd-c-paper-900);
+  --kd-fg-dim: var(--kd-c-paper-700);
+  --kd-muted: var(--kd-c-paper-600);
+  --kd-fg-code: var(--kd-c-paper-900);
+
+  --kd-accent: var(--kd-c-leaf-700);
+  --kd-accent-2: var(--kd-c-sun-700);
+  --kd-danger: var(--kd-c-momiji-700);
+
+  /* diff の 6 色。行番号セルは行の背景より濃くする（GitHub と同じ濃淡構造）。
+     明るい側は輝度の刻みが圧縮されるので、同じ強調比を得るには α を大きく取る。 */
+  --kd-diff-add-bg: rgb(46 125 79 / 0.1);
+  --kd-diff-add-num: rgb(46 125 79 / 0.22);
+  --kd-diff-add-emph: rgb(46 125 79 / 0.34);
+  --kd-diff-del-bg: rgb(192 68 46 / 0.1);
+  --kd-diff-del-num: rgb(192 68 46 / 0.22);
+  --kd-diff-del-emph: rgb(192 68 46 / 0.34);
+  --kd-diff-hunk: rgb(31 95 168 / 0.08);
+
+  --kd-t-keyword: var(--kd-c-momiji-800);
+  --kd-t-string: var(--kd-c-leaf-900);
+  --kd-t-comment: #78715f;
+  --kd-t-number: var(--kd-c-sky-700);
+  --kd-t-function: var(--kd-c-violet-700);
+  --kd-t-type: var(--kd-c-sun-800);
+  --kd-t-variable: var(--kd-c-paper-800);
+  --kd-t-constant: var(--kd-c-water-700);
+  --kd-t-operator: #7a5a46;
+  --kd-t-punctuation: var(--kd-c-paper-600);
+  --kd-t-tag: var(--kd-c-leaf-800);
+  --kd-t-attribute: var(--kd-c-moss-700);
+}
+
 :root[data-theme="dark"] {
   color-scheme: dark;
 
@@ -90,12 +136,13 @@
   --kd-accent-2: var(--kd-c-sun-300);
   --kd-danger: var(--kd-c-momiji-400);
 
-  /* diff の 4 色。行背景は add / del とも α .10 で揃え、強調はその上に重ねる。
-     暗い側は .26〜.28 で emph : bg のコントラストが 1.37〜1.39 に収まる。 */
   --kd-diff-add-bg: rgb(95 191 125 / 0.1);
+  --kd-diff-add-num: rgb(95 191 125 / 0.2);
   --kd-diff-add-emph: rgb(95 191 125 / 0.26);
   --kd-diff-del-bg: rgb(224 112 92 / 0.1);
+  --kd-diff-del-num: rgb(224 112 92 / 0.2);
   --kd-diff-del-emph: rgb(224 112 92 / 0.28);
+  --kd-diff-hunk: rgb(143 188 232 / 0.1);
 
   --kd-t-keyword: var(--kd-c-momiji-300);
   --kd-t-string: var(--kd-c-leaf-300);
@@ -111,48 +158,6 @@
   --kd-t-attribute: var(--kd-c-moss-300);
 }
 
-:root[data-theme="light"] {
-  color-scheme: light;
-
-  --kd-bg: var(--kd-c-paper-50);
-  --kd-sidebar: var(--kd-c-paper-200);
-  --kd-panel: var(--kd-c-paper-100);
-  --kd-elevated: #ffffff;
-
-  --kd-border: rgb(60 50 30 / 0.11);
-  --kd-border-strong: rgb(60 50 30 / 0.2);
-  --kd-hover: rgb(60 50 30 / 0.045);
-  --kd-active: rgb(60 50 30 / 0.085);
-
-  --kd-fg: var(--kd-c-paper-900);
-  --kd-fg-dim: var(--kd-c-paper-700);
-  --kd-muted: var(--kd-c-paper-600);
-  --kd-fg-code: var(--kd-c-paper-900);
-
-  --kd-accent: var(--kd-c-leaf-700);
-  --kd-accent-2: var(--kd-c-sun-700);
-  --kd-danger: var(--kd-c-momiji-700);
-
-  /* 明るい側は輝度の刻みが圧縮されるため、同じ強調比を得るには α を大きく取る。 */
-  --kd-diff-add-bg: rgb(46 125 79 / 0.1);
-  --kd-diff-add-emph: rgb(46 125 79 / 0.34);
-  --kd-diff-del-bg: rgb(192 68 46 / 0.1);
-  --kd-diff-del-emph: rgb(192 68 46 / 0.34);
-
-  --kd-t-keyword: var(--kd-c-momiji-800);
-  --kd-t-string: var(--kd-c-leaf-900);
-  --kd-t-comment: #78715f;
-  --kd-t-number: var(--kd-c-sky-700);
-  --kd-t-function: var(--kd-c-violet-700);
-  --kd-t-type: var(--kd-c-sun-800);
-  --kd-t-variable: var(--kd-c-paper-800);
-  --kd-t-constant: var(--kd-c-water-700);
-  --kd-t-operator: #7a5a46;
-  --kd-t-punctuation: var(--kd-c-paper-600);
-  --kd-t-tag: var(--kd-c-leaf-800);
-  --kd-t-attribute: var(--kd-c-moss-700);
-}
-
 /* ==========================================================================
    非色トークン
    ========================================================================== */
@@ -163,19 +168,20 @@
   --kd-font-sans: system-ui, -apple-system, "Hiragino Sans", sans-serif;
 
   --kd-code-size: 12px;
-  /* 24px。整数 px 固定は仮想化の見積もりが厳密に当たる条件で、12px に対し 2.0 は
-     日本語の全角が窮屈にならない下限。GitHub の diff も同じ 24px を採る。 */
+  /* 24px。仮想化の見積もりが厳密に当たるよう整数 px で固定する。
+     12px に対し 2.0 は日本語の全角が窮屈にならない下限。GitHub の diff も同値。 */
   --kd-line-h: 24px;
-  --kd-sign-w: 20px;
+  /* 行の型ごとの高さ。仮想化はこの値をそのまま見積もりに使う。 */
+  --kd-file-header-h: 44px;
+  --kd-file-gap-h: 16px;
+  --kd-sign-w: 22px;
   --kd-digits: 3;
-  /* 行番号は最低でも 2 桁ぶんの余白を確保する。桁が増えても幅が跳ねない。 */
+  /* 行番号は最低でも 50px。桁が増えても幅が跳ねない（GitHub と同値）。 */
   --kd-gutter: max(50px, calc(var(--kd-digits) * 1ch + 20px));
-  /* コード本文の左右。詰めるとレビュー中の視線が行末で折り返しにくい。 */
   --kd-code-pad: 16px;
-  /* macOS の信号機ボタンを避ける高さ。 */
+
   --kd-titlebar-pad: 30px;
-  --kd-titlebar-h: 56px;
-  /* 一覧の行。密度はここで一括して決める。 */
+  --kd-topbar-h: 56px;
   --kd-row-py: 8px;
   --kd-row-px: 14px;
 
@@ -256,6 +262,7 @@ body {
   font-size: 13px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  /* スクロールはツリーと diff の 2 か所だけが持つ。ここでは持たせない。 */
   overflow: hidden;
 }
 
@@ -268,10 +275,9 @@ button {
   background: var(--kd-select-bg);
 }
 
-/* スクロールバーは常時見えると diff のノイズになるので細く沈める。 */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--kd-border-strong);

@@ -15,8 +15,8 @@ export function DiffCode({
   wordDiff: boolean;
 }) {
   const segments = useMemo(() => {
-    // Rust が返した本文とトークン範囲の長さが食い違ったら、その行だけプレーンに
-    // 落とす。壊れていても必ず画面は出る。
+    // Rust が返した本文とトークン範囲が食い違ったら、その行だけプレーンに落とす。
+    // 食い違ったまま重ねると強調位置がずれる。壊れていても必ず画面は出る。
     const tokens = line.tokens;
     const usable =
       !tokens ||
@@ -29,7 +29,7 @@ export function DiffCode({
   }, [line.content, line.tokens, line.inline, wordDiff]);
 
   return (
-    <span className="kd-code">
+    <>
       {segments.map((s, i) =>
         s.kind === "plain" && !s.emph ? (
           s.text
@@ -48,6 +48,6 @@ export function DiffCode({
           ↵
         </span>
       ) : null}
-    </span>
+    </>
   );
 }

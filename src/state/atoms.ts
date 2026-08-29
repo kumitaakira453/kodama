@@ -3,6 +3,7 @@ import { atomWithStorage } from "jotai/utils";
 
 import type { CommitSelection } from "../lib/revisions";
 import type {
+  DiffResponse,
   Project,
   RevisionList,
   ViewMode,
@@ -13,14 +14,14 @@ import type {
 /** 初回描画のちらつきを防ぐため、localStorage を同期的に読む。 */
 const sync = { getOnInit: true } as const;
 
-export type Theme = "dark" | "light" | "system";
+export type Theme = "light" | "dark" | "system";
 export type MotionPref = "auto" | "reduced";
 
 // ---- 見た目の好み。壊れても再設定で済むので localStorage に置く ----
 
 export const themeAtom = atomWithStorage<Theme>(
   "kodama.theme",
-  "system",
+  "light",
   undefined,
   sync,
 );
@@ -32,7 +33,7 @@ export const motionAtom = atomWithStorage<MotionPref>(
 );
 export const viewModeAtom = atomWithStorage<ViewMode>(
   "kodama.viewMode",
-  "split",
+  "unified",
   undefined,
   sync,
 );
@@ -54,21 +55,15 @@ export const contextLinesAtom = atomWithStorage<number>(
   undefined,
   sync,
 );
-export const hideViewedAtom = atomWithStorage<boolean>(
-  "kodama.hideViewed",
-  false,
+export const sidebarOpenAtom = atomWithStorage<boolean>(
+  "kodama.sidebarOpen",
+  true,
   undefined,
   sync,
 );
-export const treeWidthAtom = atomWithStorage<number>(
-  "kodama.treeWidth",
-  288,
-  undefined,
-  sync,
-);
-export const filesWidthAtom = atomWithStorage<number>(
-  "kodama.filesWidth",
-  340,
+export const sidebarWidthAtom = atomWithStorage<number>(
+  "kodama.sidebarWidth",
+  296,
   undefined,
   sync,
 );
@@ -93,13 +88,6 @@ export const commitSelectionAtom = atomWithStorage<CommitSelection>(
   undefined,
   sync,
 );
-/** 中ペインを上下に分ける境界。コミット一覧の高さ。 */
-export const commitPaneHeightAtom = atomWithStorage<number>(
-  "kodama.commitPaneHeight",
-  300,
-  undefined,
-  sync,
-);
 
 // ---- Rust の返り値のキャッシュ。揮発してよい ----
 
@@ -110,8 +98,27 @@ export const worktreesAtom = atom<Record<string, WorktreeInfo[]>>({});
 export const statusesAtom = atom<Record<string, WorktreeStatus>>({});
 /** 選択中 worktree のコミット一覧。 */
 export const revisionsAtom = atom<RevisionList | null>(null);
-export const selectedFileAtom = atom<string | null>(null);
-export const settingsOpenAtom = atom<boolean>(false);
+export const diffAtom = atom<DiffResponse | null>(null);
+export const diffLoadingAtom = atom<boolean>(false);
+
+// ---- diff の表示状態 ----
+
+/** 折りたたんでいるファイル。閲覧済みと生成ファイルは既定で畳む。 */
+export const collapsedFilesAtom = atom<Set<string>>(new Set<string>());
+/** いま画面の上端に見えているファイル。左ツリーの強調に使う。 */
+export const currentFileAtom = atom<string | null>(null);
+/** 左ツリーの絞り込み。 */
+export const fileFilterAtom = atom<string>("");
+
+/**
+ * 「このファイルまで飛べ」という要求。
+ *
+ * 同じファイルを続けて押しても届くよう、通し番号を添える。ref を親から
+ * 配って回すより、要求を状態として置く方が経路が 1 本で済む。
+ */
+export const jumpRequestAtom = atom<{ path: string; nonce: number } | null>(
+  null,
+);
 
 // ---- 一時状態 ----
 
@@ -122,5 +129,4 @@ export interface Toast {
 }
 
 export const toastsAtom = atom<Toast[]>([]);
-/** 仮想スクロール中はトランジションを止める。 */
-export const scrollingAtom = atom<boolean>(false);
+export const settingsOpenAtom = atom<boolean>(false);

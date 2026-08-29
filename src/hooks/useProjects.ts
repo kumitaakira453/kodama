@@ -18,14 +18,12 @@ import { useToast } from "./useToast";
  * 一覧（git 1 回）と状態（worktree ごとに git 数回）を分けて取得し、一覧を先に
  * 描いてから状態を後追いで埋める。worktree が多くても最初の描画を待たせない。
  */
-export function useDashboard() {
+export function useProjects() {
   const [projects, setProjects] = useAtom(projectsAtom);
-  const setWorktrees = useSetAtom(worktreesAtom);
+  const [worktrees, setWorktrees] = useAtom(worktreesAtom);
   const setStatuses = useSetAtom(statusesAtom);
-  const [selectedProjectId, setSelectedProjectId] = useAtom(
-    selectedProjectIdAtom,
-  );
-  const [selectedWorktree, setSelectedWorktree] = useAtom(selectedWorktreeAtom);
+  const [projectId, setProjectId] = useAtom(selectedProjectIdAtom);
+  const [worktree, setWorktree] = useAtom(selectedWorktreeAtom);
   const [loading, setLoading] = useState(true);
   const { showError } = useToast();
 
@@ -33,15 +31,15 @@ export function useDashboard() {
   const generation = useRef(0);
 
   const loadWorktrees = useCallback(
-    async (projectId: string, gen: number) => {
+    async (id: string, gen: number) => {
       try {
-        const list = await api.listWorktrees(projectId);
+        const list = await api.listWorktrees(id);
         if (gen !== generation.current) return;
-        setWorktrees((prev) => ({ ...prev, [projectId]: list }));
+        setWorktrees((prev) => ({ ...prev, [id]: list }));
 
         const paths = list.map((w) => w.path);
         if (paths.length === 0) return;
-        const statuses = await api.worktreeStatuses(projectId, paths);
+        const statuses = await api.worktreeStatuses(id, paths);
         if (gen !== generation.current) return;
         setStatuses((prev) => {
           const next = { ...prev };
@@ -76,34 +74,34 @@ export function useDashboard() {
     void reload();
   }, [reload]);
 
-  // 選択の穴埋めは reload と分けておく。reload が選択に依存すると、選択を直した
+  // 選択の穴埋めは reload と分ける。reload が選択に依存すると、選択を直した
   // 瞬間に reload の同一性が変わって再読込が二重に走る。
   useEffect(() => {
     if (projects.length === 0) return;
-    if (!projects.some((p) => p.id === selectedProjectId)) {
-      setSelectedProjectId(projects[0].id);
+    if (!projects.some((p) => p.id === projectId)) {
+      setProjectId(projects[0].id);
     }
-  }, [projects, selectedProjectId, setSelectedProjectId]);
+  }, [projects, projectId, setProjectId]);
 
-  const worktrees = useAtomValue(worktreesAtom);
   useEffect(() => {
-    if (!selectedProjectId) return;
-    const list = worktrees[selectedProjectId];
+    if (!projectId) return;
+    const list = worktrees[projectId];
     if (!list?.length) return;
-    if (!list.some((w) => w.path === selectedWorktree)) {
-      setSelectedWorktree((list.find((w) => w.isMain) ?? list[0]).path);
+    if (!list.some((w) => w.path === worktree)) {
+      setWorktree((list.find((w) => w.isMain) ?? list[0]).path);
     }
-  }, [worktrees, selectedProjectId, selectedWorktree, setSelectedWorktree]);
+  }, [worktrees, projectId, worktree, setWorktree]);
 
   const addProject = useCallback(
     async (path: string) => {
       const project = await api.addProject(path);
       setProjects((prev) => [...prev, project]);
-      setSelectedProjectId(project.id);
+      setProjectId(project.id);
+      setWorktree(null);
       await loadWorktrees(project.id, generation.current);
       return project;
     },
-    [setProjects, setSelectedProjectId, loadWorktrees],
+    [setProjects, setProjectId, setWorktree, loadWorktrees],
   );
 
   const removeProject = useCallback(
@@ -115,27 +113,20 @@ export function useDashboard() {
         delete next[id];
         return next;
       });
-      if (selectedProjectId === id) {
-        setSelectedProjectId(null);
-        setSelectedWorktree(null);
+      if (projectId === id) {
+        setProjectId(null);
+        setWorktree(null);
       }
     },
-    [
-      setProjects,
-      setWorktrees,
-      selectedProjectId,
-      setSelectedProjectId,
-      setSelectedWorktree,
-    ],
+    [setProjects, setWorktrees, projectId, setProjectId, setWorktree],
   );
 
-  return {
-    projects,
-    loading,
-    selectedProjectId,
-    selectedWorktree,
-    reload,
-    addProject,
-    removeProject,
-  };
+  return { projects, loading, reload, addProject, removeProject };
+}
+
+/** 選択中プロジェクトの worktree 一覧。 */
+export function useCurrentWorktrees() {
+  const projectId = useAtomValue(selectedProjectIdAtom);
+  const worktrees = useAtomValue(worktreesAtom);
+  return projectId ? (worktrees[projectId] ?? []) : [];
 }

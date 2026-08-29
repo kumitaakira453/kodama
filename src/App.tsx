@@ -1,83 +1,48 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
-import { CommitPane } from "./components/commits/CommitPane";
-import { DiffPane } from "./components/diff/DiffPane";
+import { DiffCanvas } from "./components/diff/DiffCanvas";
 import { EmptyProjects } from "./components/empty/EmptyProjects";
-import { FilePane } from "./components/files/FilePane";
-import { TitleBar } from "./components/layout/TitleBar";
 import { SettingsModal } from "./components/projects/SettingsModal";
-import { HResizer } from "./components/ui/HResizer";
+import { TopBar } from "./components/topbar/TopBar";
+import { TreePane } from "./components/tree/TreePane";
 import { Resizer } from "./components/ui/Resizer";
 import { RingSpinner } from "./components/ui/RingSpinner";
 import { Toasts } from "./components/ui/Toasts";
-import { WorktreePane } from "./components/worktrees/WorktreePane";
-import { useDashboard } from "./hooks/useDashboard";
 import { useDiff } from "./hooks/useDiff";
-import { useFileDiff } from "./hooks/useFileDiff";
-import { usePaneResize } from "./hooks/usePaneResize";
+import { useProjects } from "./hooks/useProjects";
 import { useRevisions } from "./hooks/useRevisions";
 import { useTheme } from "./hooks/useTheme";
 import { useToast } from "./hooks/useToast";
-import { buildSpec } from "./lib/revisions";
 import {
-  commitPaneHeightAtom,
-  commitSelectionAtom,
-  filesWidthAtom,
-  revisionsAtom,
-  selectedFileAtom,
+  jumpRequestAtom,
   selectedWorktreeAtom,
   settingsOpenAtom,
-  treeWidthAtom,
+  sidebarOpenAtom,
+  sidebarWidthAtom,
 } from "./state/atoms";
 
-/** コミット一覧とファイル一覧、それぞれが潰れない最小の高さ。 */
-const MIN_COMMITS_H = 120;
-const MIN_FILES_H = 140;
+/** サイドバーの幅。狭すぎるとパスが読めず、広すぎると diff が窮屈になる。 */
+const MIN_SIDEBAR = 220;
+const MAX_SIDEBAR = 520;
 
 export default function App() {
   useTheme();
   useRevisions();
 
-  const { projects, loading, reload, addProject, removeProject } =
-    useDashboard();
+  const { projects, loading, reload, addProject, removeProject } = useProjects();
+  const { reload: reloadDiff } = useDiff();
   const { showError } = useToast();
-  const { treeWidth, filesWidth, dragTree, dragFiles } = usePaneResize(
-    treeWidthAtom,
-    filesWidthAtom,
-  );
-  const [commitHeight, setCommitHeight] = useAtom(commitPaneHeightAtom);
+
+  const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
+  const [sidebarWidth, setSidebarWidth] = useAtom(sidebarWidthAtom);
   const [settingsOpen, setSettingsOpen] = useAtom(settingsOpenAtom);
-  const revisions = useAtomValue(revisionsAtom);
-  const selection = useAtomValue(commitSelectionAtom);
-  const selectedWorktree = useAtomValue(selectedWorktreeAtom);
-  const selectedFile = useAtomValue(selectedFileAtom);
+  const worktree = useAtomValue(selectedWorktreeAtom);
+  const setJump = useSetAtom(jumpRequestAtom);
   const [dragging, setDragging] = useState(false);
-
-  const spec = buildSpec(
-    selection,
-    revisions?.commits ?? [],
-    revisions?.defaultBase ?? null,
-  );
-  const { diff, loading: diffLoading } = useDiff(spec);
-  // 一覧側の差分には色が付いていない。選択中のファイルだけを取り直し、
-  // 構文ハイライトが届いたら差し替える。
-  const listedFile =
-    diff?.files.find((f) => f.path === selectedFile) ?? null;
-  const shownFile = useFileDiff(spec, listedFile);
-
-  const revealInWorktree = useCallback(
-    (relativePath: string) => {
-      if (!selectedWorktree) return;
-      void revealItemInDir(`${selectedWorktree}/${relativePath}`).catch(
-        showError,
-      );
-    },
-    [selectedWorktree, showError],
-  );
 
   const handleAddProject = useCallback(async () => {
     try {
@@ -100,22 +65,33 @@ export default function App() {
     [removeProject, showError],
   );
 
-  const handleReveal = useCallback(
+  const revealAbsolute = useCallback(
     (path: string) => {
       void revealItemInDir(path).catch(showError);
     },
     [showError],
   );
 
-  const dragCommitBoundary = useCallback(
-    (dy: number) => {
-      setCommitHeight((h) => {
-        const available = window.innerHeight - MIN_FILES_H;
-        return Math.max(MIN_COMMITS_H, Math.min(h + dy, available));
-      });
+  const revealInWorktree = useCallback(
+    (relative: string) => {
+      if (!worktree) return;
+      revealAbsolute(`${worktree}/${relative}`);
     },
-    [setCommitHeight],
+    [worktree, revealAbsolute],
   );
+
+  const dragSidebar = useCallback(
+    (dx: number) =>
+      setSidebarWidth((w) =>
+        Math.max(MIN_SIDEBAR, Math.min(w + dx, MAX_SIDEBAR)),
+      ),
+    [setSidebarWidth],
+  );
+
+  const reloadAll = useCallback(() => {
+    void reload();
+    reloadDiff();
+  }, [reload, reloadDiff]);
 
   // ウィンドウ全体をドロップ先にする。
   useEffect(() => {
@@ -146,12 +122,15 @@ export default function App() {
         void handleAddProject();
       } else if (e.key === "r") {
         e.preventDefault();
-        void reload();
+        reloadAll();
+      } else if (e.key === "b") {
+        e.preventDefault();
+        setSidebarOpen(!sidebarOpen);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handleAddProject, reload]);
+  }, [handleAddProject, reloadAll, sidebarOpen, setSidebarOpen]);
 
   if (loading && projects.length === 0) {
     return (
@@ -164,12 +143,7 @@ export default function App() {
   if (projects.length === 0) {
     return (
       <div className="kd-shell">
-        <TitleBar
-          projects={projects}
-          commits={[]}
-          defaultBase={null}
-          onReload={reload}
-        />
+        <TopBar projects={projects} onReload={reloadAll} />
         <EmptyProjects onAddProject={handleAddProject} dragging={dragging} />
         <Toasts />
       </div>
@@ -178,44 +152,23 @@ export default function App() {
 
   return (
     <div className="kd-shell" data-dragging={dragging || undefined}>
-      <TitleBar
-        projects={projects}
-        commits={revisions?.commits ?? []}
-        defaultBase={revisions?.defaultBase ?? null}
-        onReload={reload}
-      />
+      <TopBar projects={projects} onReload={reloadAll} />
 
-      <div className="kd-panes">
-        <aside className="kd-pane kd-pane--tree" style={{ width: treeWidth }}>
-          <WorktreePane onRevealWorktree={handleReveal} />
-        </aside>
-        <Resizer onDrag={dragTree} />
+      <div className="kd-body">
+        {sidebarOpen ? (
+          <>
+            <aside className="kd-sidebar" style={{ width: sidebarWidth }}>
+              <TreePane
+                onJump={(path) => setJump({ path, nonce: Date.now() })}
+              />
+            </aside>
+            <Resizer onDrag={dragSidebar} />
+          </>
+        ) : null}
 
-        <section className="kd-pane kd-pane--mid" style={{ width: filesWidth }}>
-          <div
-            className="kd-pane__top"
-            style={{ height: commitHeight, flexBasis: commitHeight }}
-          >
-            <CommitPane />
-          </div>
-          <HResizer onDrag={dragCommitBoundary} />
-          <div className="kd-pane__bottom">
-            <FilePane
-              diff={diff}
-              loading={diffLoading}
-              onRevealFile={revealInWorktree}
-            />
-          </div>
-        </section>
-        <Resizer onDrag={dragFiles} />
-
-        <section className="kd-pane kd-pane--diff">
-          <DiffPane
-            file={shownFile}
-            loading={diffLoading}
-            onOpenFile={(path) => revealInWorktree(path)}
-          />
-        </section>
+        <main className="kd-main">
+          <DiffCanvas onReveal={revealInWorktree} />
+        </main>
       </div>
 
       {settingsOpen ? (
@@ -224,7 +177,7 @@ export default function App() {
           onClose={() => setSettingsOpen(false)}
           onAddProject={handleAddProject}
           onRemoveProject={handleRemoveProject}
-          onReveal={handleReveal}
+          onReveal={revealAbsolute}
         />
       ) : null}
       <Toasts />

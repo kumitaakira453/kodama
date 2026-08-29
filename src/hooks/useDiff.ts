@@ -1,46 +1,51 @@
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { api } from "../lib/ipc";
-import type { DiffResponse, DiffSpec } from "../lib/types";
+import { buildSpec } from "../lib/revisions";
+import type { DiffFile, DiffSpec } from "../lib/types";
 import {
+  collapsedFilesAtom,
+  commitSelectionAtom,
   contextLinesAtom,
-  selectedFileAtom,
+  diffAtom,
+  diffLoadingAtom,
+  revisionsAtom,
   selectedWorktreeAtom,
 } from "../state/atoms";
 import { useToast } from "./useToast";
 
-interface DiffState {
-  diff: DiffResponse | null;
-  loading: boolean;
-  reload: () => void;
-}
-
 /**
  * 選択中の worktree と比較対象から差分を読む。
  *
- * 読み込み中に選択が変わったら古い結果を捨てる。取得できたら、選択中のファイルが
- * 一覧から消えていた場合だけ選択を外す（同じファイルが残っているなら保つ）。
+ * 生成ファイルは届いた時点で畳んでおく。lock ファイルの数万行が既定で開いていると
+ * 目的の変更まで延々スクロールすることになる。
  */
-export function useDiff(spec: DiffSpec | null): DiffState {
+export function useDiff() {
   const worktree = useAtomValue(selectedWorktreeAtom);
   const context = useAtomValue(contextLinesAtom);
-  const setSelectedFile = useSetAtom(selectedFileAtom);
-  const [diff, setDiff] = useState<DiffResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const selection = useAtomValue(commitSelectionAtom);
+  const revisions = useAtomValue(revisionsAtom);
+  const setDiff = useSetAtom(diffAtom);
+  const setLoading = useSetAtom(diffLoadingAtom);
+  const setCollapsed = useSetAtom(collapsedFilesAtom);
   const { showError } = useToast();
   const generation = useRef(0);
 
+  const spec = buildSpec(
+    selection,
+    revisions?.commits ?? [],
+    revisions?.defaultBase ?? null,
+  );
   // spec は毎描画で作り直されるので、同一性ではなく内容で依存を判定する。
-  // 実体は ref から読み、キーは再取得の要否だけに使う。
   const key = spec ? JSON.stringify(spec) : null;
   const specRef = useRef<DiffSpec | null>(spec);
   specRef.current = spec;
 
-  const run = useCallback(() => {
+  const reload = useCallback(() => {
     const gen = ++generation.current;
     const current = specRef.current;
-    if (!worktree || !key || !current) {
+    if (!worktree || !current) {
       setDiff(null);
       setLoading(false);
       return;
@@ -51,9 +56,7 @@ export function useDiff(spec: DiffSpec | null): DiffState {
       .then((res) => {
         if (gen !== generation.current) return;
         setDiff(res);
-        setSelectedFile((prev) =>
-          prev && res.files.some((f) => f.path === prev) ? prev : null,
-        );
+        setCollapsed(collapsedByDefault(res.files));
       })
       .catch((e: unknown) => {
         if (gen !== generation.current) return;
@@ -63,9 +66,14 @@ export function useDiff(spec: DiffSpec | null): DiffState {
       .finally(() => {
         if (gen === generation.current) setLoading(false);
       });
-  }, [worktree, key, context, setSelectedFile, showError]);
+    // key は再取得の要否だけに使う。実体は ref から読む。
+  }, [worktree, key, context, setDiff, setLoading, setCollapsed, showError]);
 
-  useEffect(run, [run]);
+  useEffect(reload, [reload]);
 
-  return { diff, loading, reload: run };
+  return { reload };
+}
+
+function collapsedByDefault(files: DiffFile[]): Set<string> {
+  return new Set(files.filter((f) => f.generated).map((f) => f.path));
 }
