@@ -82,8 +82,7 @@ export type DiffFileStatus =
   | "deleted"
   | "renamed"
   | "copied"
-  | "untracked"
-  | "typeChanged";
+  | "untracked";
 
 export type DiffLineKind = "context" | "add" | "del";
 

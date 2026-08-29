@@ -234,7 +234,7 @@ function noticeFor(file: DiffFile): string | null {
   if (file.hunks.length === 0) {
     if (file.status === "renamed") return "内容の変更はありません（パスの変更のみ）";
     if (file.status === "copied") return "内容の変更はありません（コピーのみ）";
-    return "内容の変更はありません（モードの変更のみ）";
+    return "内容の変更はありません";
   }
   return null;
 }

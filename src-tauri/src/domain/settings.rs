@@ -33,16 +33,6 @@ pub struct EditorSpec {
     pub args_template: Vec<String>,
 }
 
-/// フロントに返す「今この環境で起動できるアプリ」。
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AppTarget {
-    pub id: String,
-    pub label: String,
-    /// 行番号を指定して開けるか。UI の文言に使う。
-    pub supports_line: bool,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {

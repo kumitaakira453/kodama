@@ -18,7 +18,6 @@ const STATUS_MARK: Record<DiffFileStatus, string> = {
   renamed: "R",
   copied: "C",
   untracked: "?",
-  typeChanged: "T",
 };
 
 interface TreePaneProps {

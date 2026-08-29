@@ -26,14 +26,6 @@ pub fn config_file() -> PathBuf {
     config_dir().join("config.json")
 }
 
-pub fn comments_file(project_id: &str) -> PathBuf {
-    data_dir().join("comments").join(format!("{project_id}.json"))
-}
-
-pub fn viewed_file(project_id: &str) -> PathBuf {
-    state_dir().join("viewed").join(format!("{project_id}.json"))
-}
-
 fn xdg_dir(env_key: &str, fallback: &str) -> PathBuf {
     match std::env::var(env_key) {
         Ok(v) if !v.trim().is_empty() => PathBuf::from(v).join(APP),

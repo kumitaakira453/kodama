@@ -6,7 +6,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::error::KdResult;
-use crate::review::{self, format, model::Status};
+use crate::review::{self, format, model::Status, store};
 
 #[derive(Parser)]
 #[command(
@@ -45,6 +45,22 @@ enum ReviewAction {
         status: StatusFilter,
         #[arg(long, value_enum, default_value_t = OutputFormat::Md)]
         format: OutputFormat,
+    },
+    /// 指摘を作る。GUI を使わずに書き留めたいときに使う
+    Add {
+        #[arg(long)]
+        file: String,
+        #[arg(long)]
+        line: u32,
+        #[arg(long)]
+        body: String,
+        /// 範囲の終わり。省略すると 1 行だけ
+        #[arg(long)]
+        line_end: Option<u32>,
+        #[arg(long)]
+        worktree: Option<String>,
+        #[arg(long, default_value = "AI")]
+        author: String,
     },
     /// 指摘を 1 件表示する
     Show {
@@ -115,6 +131,34 @@ fn run_review(action: ReviewAction) -> KdResult<()> {
             println!("{}", render(&views, fmt)?);
         }
 
+        ReviewAction::Add {
+            file,
+            line,
+            body,
+            line_end,
+            worktree,
+            author,
+        } => {
+            let repo = worktree.unwrap_or_else(current_worktree);
+            let end = line_end.unwrap_or(line);
+            // 指摘した時点の逐語を控える。位置が追えなくなっても対象が伝わる。
+            let quote = read_lines(&repo, &file, line, end);
+            let thread = review::add(review::model::ThreadInput {
+                repo: repo.clone(),
+                // CLI からは作業ツリーに対する指摘として置く。
+                revision_key: format!("uncommitted:{}", store::normalize_path(&repo)),
+                file,
+                side: review::model::Side::New,
+                line_start: line,
+                line_end: end,
+                quote,
+                context: String::new(),
+                body,
+                author,
+            })?;
+            println!("指摘を作りました: #{}", thread.id);
+        }
+
         ReviewAction::Show { thread, format: fmt } => {
             let view = review::get(&thread)?;
             println!("{}", render(std::slice::from_ref(&view), fmt)?);
@@ -181,4 +225,16 @@ fn current_worktree() -> String {
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|_| ".".to_string())
     })
+}
+
+/// 対象の行を読む。読めなければ空にする（引用が無くても指摘は作れる）。
+fn read_lines(repo: &str, file: &str, from: u32, to: u32) -> String {
+    let Ok(text) = std::fs::read_to_string(std::path::Path::new(repo).join(file)) else {
+        return String::new();
+    };
+    text.lines()
+        .skip(from.max(1) as usize - 1)
+        .take((to.saturating_sub(from) + 1) as usize)
+        .collect::<Vec<_>>()
+        .join("\n")
 }

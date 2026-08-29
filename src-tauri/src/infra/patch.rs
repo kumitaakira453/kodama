@@ -14,8 +14,6 @@ pub struct ParsedFile {
     pub old_path: Option<String>,
     pub status: DiffFileStatus,
     pub binary: bool,
-    pub old_mode: Option<String>,
-    pub new_mode: Option<String>,
     pub hunks: Vec<DiffHunk>,
     /// このファイル分の生の diff テキスト。閲覧済みマークの陳腐化判定に使う。
     pub raw: String,
@@ -49,8 +47,6 @@ fn parse_file(lines: &[&str]) -> Option<ParsedFile> {
     let mut rename_to: Option<String> = None;
     let mut status: Option<DiffFileStatus> = None;
     let mut binary = false;
-    let mut old_mode: Option<String> = None;
-    let mut new_mode: Option<String> = None;
     let mut hunks: Vec<DiffHunk> = Vec::new();
     let mut body_start = lines.len();
 
@@ -73,16 +69,10 @@ fn parse_file(lines: &[&str]) -> Option<ParsedFile> {
             status = Some(DiffFileStatus::Copied);
         } else if let Some(rest) = line.strip_prefix("copy to ") {
             rename_to = Some(unquote(rest));
-        } else if let Some(rest) = line.strip_prefix("new file mode ") {
+        } else if line.starts_with("new file mode ") {
             status = Some(DiffFileStatus::Added);
-            new_mode = Some(rest.trim().to_string());
-        } else if let Some(rest) = line.strip_prefix("deleted file mode ") {
+        } else if line.starts_with("deleted file mode ") {
             status = Some(DiffFileStatus::Deleted);
-            old_mode = Some(rest.trim().to_string());
-        } else if let Some(rest) = line.strip_prefix("old mode ") {
-            old_mode = Some(rest.trim().to_string());
-        } else if let Some(rest) = line.strip_prefix("new mode ") {
-            new_mode = Some(rest.trim().to_string());
         } else if line.starts_with("Binary files ") || line.starts_with("GIT binary patch") {
             binary = true;
         }
@@ -104,12 +94,10 @@ fn parse_file(lines: &[&str]) -> Option<ParsedFile> {
         old_path.filter(|p| Some(p) != new_path.as_ref())
     });
 
-    let status = status.unwrap_or_else(|| {
-        if old_mode.is_some() && new_mode.is_some() && hunks.is_empty() && !binary {
-            DiffFileStatus::TypeChanged
-        } else {
-            DiffFileStatus::Modified
-        }
+    let status = status.unwrap_or({
+        // mode だけが変わった場合もここに来る。内容の変更が無いことは
+        // hunks が空であることで呼び出し側に伝わる。
+        DiffFileStatus::Modified
     });
 
     Some(ParsedFile {
@@ -117,8 +105,6 @@ fn parse_file(lines: &[&str]) -> Option<ParsedFile> {
         old_path,
         status,
         binary,
-        old_mode,
-        new_mode,
         hunks,
         raw: lines.join("\n"),
     })

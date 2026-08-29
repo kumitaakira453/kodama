@@ -82,18 +82,20 @@ fn map_line(base: &str, current: &str, line: u32) -> Resolved {
             }
             ChangeTag::Delete => {
                 if old_index == target {
-                    // 対象の行は消えた。同じ位置に別の行が入っていれば書き換え、
-                    // 何も無ければ削除として扱う。
-                    return if new_index < current_lines.len() {
-                        Resolved {
+                    // 対象の行は消えた。同じ位置に来た行が元と似ていれば「書き換え」、
+                    // 似ていなければ「消えた」とする。無関係な行を書き換え後として
+                    // 見せると、それを直せばよいと誤解させる。
+                    let replacement = current_lines.get(new_index);
+                    let deleted = base_lines.get(target).copied().unwrap_or("");
+                    return match replacement {
+                        Some(text) if similar_enough(deleted, text) => Resolved {
                             state: AnchorState::Rewritten,
-                            current_text: current_lines.get(new_index).map(|s| s.to_string()),
-                        }
-                    } else {
-                        Resolved {
+                            current_text: Some((*text).to_string()),
+                        },
+                        _ => Resolved {
                             state: AnchorState::Removed,
                             current_text: None,
-                        }
+                        },
                     };
                 }
                 old_index += 1;
@@ -108,6 +110,43 @@ fn map_line(base: &str, current: &str, line: u32) -> Resolved {
         state: AnchorState::Removed,
         current_text: None,
     }
+}
+
+/// 消えた行と、同じ位置に来た行が「同じものの書き換え」と言えるか。
+///
+/// 識別子の重なりで測る。文字や語の類似度は、インデントと記号が共通しているだけで
+/// 高く出てしまい、`name = "user"` と `return "x"` を似ていると判定する。
+/// コードで意味を持つのは識別子なので、そこだけを見る。
+fn similar_enough(before: &str, after: &str) -> bool {
+    let a = identifiers(before);
+    let b = identifiers(after);
+    if a.is_empty() || b.is_empty() {
+        return false;
+    }
+    let shared = a.iter().filter(|w| b.contains(*w)).count();
+    // 少ない側を分母にする。片方が長くても、元の識別子が残っていれば書き換え。
+    shared as f32 / a.len().min(b.len()) as f32 >= 0.34
+}
+
+/// 2 文字以上の英数字の並びを識別子とみなす。大文字小文字は無視する。
+fn identifiers(line: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut current = String::new();
+    for c in line.chars() {
+        if c.is_alphanumeric() || c == '_' {
+            current.push(c.to_ascii_lowercase());
+        } else if current.len() >= 2 {
+            out.push(std::mem::take(&mut current));
+        } else {
+            current.clear();
+        }
+    }
+    if current.len() >= 2 {
+        out.push(current);
+    }
+    out.sort();
+    out.dedup();
+    out
 }
 
 #[cfg(test)]
@@ -134,19 +173,34 @@ mod tests {
     }
 
     #[test]
-    fn 対象の行が書き換わったら書き換えと分かる() {
-        let r = resolve_lines("a\nb\nc\n", "a\nB!\nc\n", 2);
-        assert_eq!(r.state, AnchorState::Rewritten);
+    fn インデントと記号が共通なだけでは書き換えと呼ばない() {
+        // 元は `name = "user"`、来たのは `return "x"`。空白と引用符は共通だが
+        // 識別子が重ならないので、消えたものとして扱う。
+        let r = resolve_lines(
+            "def hello():\n    name = \"user\"\n    return name\n",
+            "def hello():\n    return \"x\"\n",
+            2,
+        );
+        assert_eq!(r.state, AnchorState::Removed);
     }
 
     #[test]
-    fn 対象の行が消えたら削除と分かる() {
+    fn 無関係な行に置き換わったら削除と分かる() {
+        // b が消えて c が繰り上がる。c は b と似ていないので書き換えとは呼ばない。
         let r = resolve_lines("a\nb\nc\n", "a\nc\n", 2);
-        // b が消えて c が繰り上がる。同じ位置に別の行があるので書き換え扱い。
-        assert!(matches!(
-            r.state,
-            AnchorState::Rewritten | AnchorState::Removed
-        ));
+        assert_eq!(r.state, AnchorState::Removed);
+        assert!(r.current_text.is_none());
+    }
+
+    #[test]
+    fn 対象の行が書き換わったら書き換えと分かる() {
+        let r = resolve_lines(
+            "    name = \"user\"\n",
+            "    name = os.environ[\"NAME\"]\n",
+            1,
+        );
+        assert_eq!(r.state, AnchorState::Rewritten);
+        assert!(r.current_text.is_some());
     }
 
     #[test]

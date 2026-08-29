@@ -17,7 +17,6 @@ pub enum DiffFileStatus {
     Renamed,
     Copied,
     Untracked,
-    TypeChanged,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -134,9 +133,4 @@ pub struct DiffResponse {
     pub files: Vec<DiffFile>,
     /// 変更量が大きく hunks を省いた場合に true。
     pub truncated: bool,
-}
-
-/// 文字列の先頭から `byte` バイト目までが UTF-16 で何コードユニットになるか。
-pub fn utf16_len(s: &str) -> u32 {
-    s.encode_utf16().count() as u32
 }

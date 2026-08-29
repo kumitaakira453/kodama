@@ -8,7 +8,6 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain::ids;
 use crate::error::KdResult;
 use crate::infra::{paths, store};
 
@@ -83,9 +82,4 @@ pub fn clear(revision_key: &str) -> KdResult<()> {
     let mut book = load();
     book.marks.remove(revision_key);
     store::write_json(&path(), &book)
-}
-
-/// 差分の内容から印のキーになるハッシュを作る。
-pub fn hash_of(diff_text: &str) -> String {
-    ids::diff_hash(diff_text)
 }
