@@ -101,6 +101,22 @@ export function resolveRange(
 }
 
 /**
+ * その選択が `id` の範囲を含んでいるか。行のチェック状態に使う。
+ *
+ * 「未コミットの変更」を選べば、その一部である「ステージ済み」と
+ * 「未ステージ」も見ていることになる。含まれていることを画面に出さないと、
+ * 選択肢が互いに排他だと読めてしまう。
+ */
+export function covers(selection: CommitSelection, id: PseudoId): boolean {
+  if (selection.kind !== "pseudo") return false;
+  if (selection.id === id) return true;
+  if (selection.id === "everything") return true;
+  return (
+    selection.id === "uncommitted" && (id === "staged" || id === "unstaged")
+  );
+}
+
+/**
  * ある sha が選択に入っているか。コミット行のチェック状態に使う。
  *
  * 「すべてのコミット」は個々のコミットを全部選ぶことと同じなので、

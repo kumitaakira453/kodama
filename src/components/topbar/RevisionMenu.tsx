@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import {
   PSEUDO_LABELS,
+  covers,
   describeSelection,
   explainSelection,
   isInSelection,
@@ -24,14 +25,16 @@ import { Modal } from "../ui/Modal";
 /**
  * 未コミット側の選択肢。`uncommitted` が親で、残りはその一部。
  *
- * 並べただけでは互いに排他に見えるが、実際は `未コミットの変更` が
- * `ステージ済み` と `未ステージ` を含む。字下げでその関係を示す。
+ * 並べただけでは互いに排他に見えるが、実際は「未コミットの変更」が
+ * 「ステージ済み」と「未ステージ」を含む。字下げとチェックで関係を示す。
  */
 const WORKING: { id: PseudoId; icon: string; child: boolean }[] = [
   { id: "uncommitted", icon: "edit_note", child: false },
   { id: "staged", icon: "playlist_add_check", child: true },
   { id: "unstaged", icon: "pending_actions", child: true },
 ];
+
+type Tab = "commits" | "working";
 
 /** 比較対象を選ぶ。押すとダイアログが開く。 */
 export function RevisionMenu() {
@@ -75,31 +78,48 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
   const status = useAtomValue(statusesAtom)[worktree ?? ""];
   const [selection, setSelection] = useAtom(commitSelectionAtom);
   const [draft, setDraft] = useState<CommitSelection | null>(selection);
+  const [tab, setTab] = useState<Tab>(() => initialTab(selection));
 
   const commits = revisions?.commits ?? [];
   const defaultBase = revisions?.defaultBase ?? null;
-  const branchSelected =
-    draft?.kind === "pseudo" &&
-    (draft.id === "branch" || draft.id === "everything");
+  const allCommits = draft ? covers(draft, "branch") : false;
   const range = draft ? resolveRange(draft, commits) : null;
-  const count = branchSelected ? commits.length : (range?.count ?? 0);
+  const count = allCommits ? commits.length : (range?.count ?? 0);
 
-  const pick = (id: PseudoId) => setDraft({ kind: "pseudo", id });
+  /** その選択肢そのものが選ばれているか。親に含まれているだけの状態と区別する。 */
+  const isExactly = (id: PseudoId) =>
+    draft?.kind === "pseudo" && draft.id === id;
 
-  /** 起点を保ったまま、押した行まで選択を伸ばす / 縮める。 */
-  const extendTo = (sha: string) =>
+  /** 押し直したら外す。含まれているだけなら、そこまで絞り込む。 */
+  const togglePseudo = (id: PseudoId) =>
+    setDraft(isExactly(id) ? null : { kind: "pseudo", id });
+
+  /**
+   * コミットのチェック。範囲は常に連続に保つ。
+   *
+   * 外側を押せばそこまで広がり、内側を押せばその行を外すために外側を落とす。
+   * 起点だけを覚えて押した行を終点にする方式だと、3 件目を押したときに
+   * 2 件目までの範囲が黙って捨てられる。
+   */
+  const toggleCommit = (sha: string) =>
     setDraft((prev) => {
-      if (prev?.kind !== "commits") {
-        return { kind: "commits", anchor: sha, focus: sha };
-      }
-      // 1 件だけ選んでいるものを押し直したら外す。
-      if (prev.anchor === sha && prev.focus === sha) return null;
-      return { kind: "commits", anchor: prev.anchor, focus: sha };
+      const i = commits.findIndex((c) => c.sha === sha);
+      if (i < 0) return prev;
+      const span = currentSpan(prev, commits);
+      if (!span) return spanOf(commits, i, i);
+      const [top, bottom] = span;
+      if (i < top) return spanOf(commits, i, bottom);
+      if (i > bottom) return spanOf(commits, top, i);
+      if (top === bottom) return null;
+      return i - top <= bottom - i
+        ? spanOf(commits, i + 1, bottom)
+        : spanOf(commits, top, i - 1);
     });
 
   return (
     <Modal
       title="比較対象を選ぶ"
+      size="sm"
       onClose={onClose}
       footer={
         <>
@@ -126,143 +146,140 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
       }
     >
       <div className="kd-revmenu">
-        <PseudoRow
-          id="everything"
-          icon="all_inclusive"
+        <PickRow
+          label={PSEUDO_LABELS.everything}
           detail={
             defaultBase
               ? `${defaultBase} との分岐点から、未コミットの変更まで`
               : "比較元のブランチが見つかりません"
           }
+          icon="all_inclusive"
+          checked={draft ? covers(draft, "everything") : false}
           disabled={!defaultBase}
-          selected={draft?.kind === "pseudo" && draft.id === "everything"}
-          onSelect={() => pick("everything")}
+          onToggle={() => togglePseudo("everything")}
         />
 
-        <div className="kd-revmenu__sep">
-          <span>コミット</span>
-          {count > 1 ? (
-            <span className="kd-revmenu__badge">{count} 件</span>
-          ) : null}
-        </div>
-
-        <div className="kd-revrow" data-selected={branchSelected || undefined}>
-          <label className="kd-revrow__box" title="一覧すべてを選ぶ">
-            <input
-              type="checkbox"
-              checked={branchSelected}
-              disabled={!defaultBase}
-              // 押し直したら外れる。何も選ばれていなければ適用できない。
-              onChange={() => setDraft(branchSelected ? null : { kind: "pseudo", id: "branch" })}
-              aria-label="すべてのコミットを選択"
-            />
-          </label>
+        <div className="kd-tabs" role="tablist">
           <button
-            className="kd-revrow__body"
-            disabled={!defaultBase}
-            onClick={() =>
-              setDraft(branchSelected ? null : { kind: "pseudo", id: "branch" })
-            }
+            className="kd-tab"
+            role="tab"
+            aria-selected={tab === "commits"}
+            onClick={() => setTab("commits")}
           >
-            <span className="kd-revrow__line">
-              <span className="kd-revrow__text">
-                {PSEUDO_LABELS.branch}
-              </span>
-            </span>
-            <span className="kd-revrow__sub">
-              {defaultBase
-                ? `${defaultBase} との分岐点から ${commits.length} コミット`
-                : "比較元のブランチが見つかりません"}
-            </span>
+            コミット
+            {count > 0 ? <span className="kd-tab__count">{count}</span> : null}
+          </button>
+          <button
+            className="kd-tab"
+            role="tab"
+            aria-selected={tab === "working"}
+            onClick={() => setTab("working")}
+          >
+            未コミット
           </button>
         </div>
 
-        <div className="kd-revmenu__list">
-          {commits.map((c) => (
-            <CommitRow
-              key={c.sha}
-              commit={c}
-              selected={draft ? isInSelection(c.sha, draft, commits) : false}
-              onToggle={() => extendTo(c.sha)}
-              onSelectOnly={() =>
-                setDraft({ kind: "commits", anchor: c.sha, focus: c.sha })
+        {tab === "commits" ? (
+          <>
+            <PickRow
+              label={PSEUDO_LABELS.branch}
+              detail={
+                defaultBase
+                  ? `${defaultBase} との分岐点から ${commits.length} コミット`
+                  : "比較元のブランチが見つかりません"
               }
+              checked={allCommits}
+              disabled={!defaultBase}
+              onToggle={() => togglePseudo("branch")}
             />
-          ))}
-          {commits.length === 0 ? (
-            <p className="kd-revmenu__note">
-              このブランチで積んだコミットはありません
+
+            <div className="kd-revmenu__list">
+              {commits.map((c) => (
+                <CommitRow
+                  key={c.sha}
+                  commit={c}
+                  selected={
+                    draft ? isInSelection(c.sha, draft, commits) : false
+                  }
+                  onToggle={() => toggleCommit(c.sha)}
+                  onSelectOnly={() =>
+                    setDraft({ kind: "commits", anchor: c.sha, focus: c.sha })
+                  }
+                />
+              ))}
+              {commits.length === 0 ? (
+                <p className="kd-revmenu__note">
+                  このブランチで積んだコミットはありません
+                </p>
+              ) : null}
+            </div>
+
+            <p className="kd-revmenu__hint">
+              チェックを付けたところまで範囲が伸びます。行のクリックで 1 件だけ
+              選べます。
             </p>
-          ) : null}
-        </div>
-
-        <div className="kd-revmenu__sep">
-          <span>未コミット</span>
-        </div>
-
-        {WORKING.map(({ id, icon, child }) => {
-          const detail = workingDetail(id, status);
-          return (
-            <PseudoRow
+          </>
+        ) : (
+          WORKING.map(({ id, icon, child }) => (
+            <PickRow
               key={id}
-              id={id}
+              label={PSEUDO_LABELS[id]}
+              detail={workingDetail(id, status)}
               icon={icon}
               child={child}
-              detail={detail}
-              selected={draft?.kind === "pseudo" && draft.id === id}
-              onSelect={() => pick(id)}
+              checked={draft ? covers(draft, id) : false}
+              onToggle={() => togglePseudo(id)}
             />
-          );
-        })}
-
-        <p className="kd-revmenu__hint">
-          コミットはチェックを付けたところまで範囲が伸びます。行のクリックで
-          1 件だけ選べます。
-        </p>
+          ))
+        )}
       </div>
     </Modal>
   );
 }
 
-function PseudoRow({
-  id,
-  icon,
+/** チェックひとつの選択肢。親に含まれているときもチェックが付く。 */
+function PickRow({
+  label,
   detail,
-  selected,
-  onSelect,
+  icon,
+  checked,
+  onToggle,
   disabled = false,
   child = false,
 }: {
-  id: PseudoId;
-  icon: string;
+  label: string;
   detail: string;
-  selected: boolean;
-  onSelect: () => void;
+  icon?: string;
+  checked: boolean;
+  onToggle: () => void;
   disabled?: boolean;
   child?: boolean;
 }) {
   return (
-    <button
-      className="kd-revrow kd-revrow--pseudo"
-      data-selected={selected || undefined}
+    <div
+      className="kd-revrow"
+      data-selected={checked || undefined}
       data-child={child || undefined}
-      disabled={disabled}
-      onClick={onSelect}
     >
-      <span className="kd-revrow__box">
-        <Icon
-          name={selected ? "radio_button_checked" : "radio_button_unchecked"}
-          size={15}
+      <label className="kd-revrow__box">
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={disabled}
+          onChange={onToggle}
+          aria-label={label}
         />
-      </span>
-      <Icon name={icon} size={15} className="kd-revrow__icon" />
-      <span className="kd-revrow__body">
+      </label>
+      <button className="kd-revrow__body" disabled={disabled} onClick={onToggle}>
         <span className="kd-revrow__line">
-          <span className="kd-revrow__text">{PSEUDO_LABELS[id]}</span>
+          {icon ? (
+            <Icon name={icon} size={15} className="kd-revrow__icon" />
+          ) : null}
+          <span className="kd-revrow__text">{label}</span>
         </span>
         <span className="kd-revrow__sub">{detail}</span>
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }
 
@@ -302,6 +319,46 @@ function CommitRow({
       </button>
     </div>
   );
+}
+
+/** いま選ばれているコミットの範囲を一覧の添字で返す。新しい側が小さい。 */
+function currentSpan(
+  selection: CommitSelection | null,
+  commits: CommitInfo[],
+): [number, number] | null {
+  if (!selection) return null;
+  if (selection.kind === "pseudo") {
+    // ブランチ全体を選んだ状態からは、一覧すべてを範囲とみなして絞り込む。
+    return covers(selection, "branch") && commits.length > 0
+      ? [0, commits.length - 1]
+      : null;
+  }
+  const range = resolveRange(selection, commits);
+  if (!range) return null;
+  return [
+    commits.findIndex((c) => c.sha === range.newest.sha),
+    commits.findIndex((c) => c.sha === range.oldest.sha),
+  ];
+}
+
+function spanOf(
+  commits: CommitInfo[],
+  top: number,
+  bottom: number,
+): CommitSelection | null {
+  const newest = commits[top];
+  const oldest = commits[bottom];
+  if (!newest || !oldest) return null;
+  return { kind: "commits", anchor: newest.sha, focus: oldest.sha };
+}
+
+function initialTab(selection: CommitSelection): Tab {
+  if (selection.kind === "commits") return "commits";
+  return selection.id === "uncommitted" ||
+    selection.id === "staged" ||
+    selection.id === "unstaged"
+    ? "working"
+    : "commits";
 }
 
 function workingDetail(id: PseudoId, status: WorktreeStatus | undefined): string {

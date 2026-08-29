@@ -9,9 +9,17 @@ interface ModalProps {
   children: ReactNode;
   /** 下端に固定して出す操作。本文がスクロールしても隠れない。 */
   footer?: ReactNode;
+  /** 幅。選ぶだけのものは狭くする。 */
+  size?: "sm" | "md";
 }
 
-export function Modal({ title, onClose, children, footer }: ModalProps) {
+export function Modal({
+  title,
+  onClose,
+  children,
+  footer,
+  size = "md",
+}: ModalProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -23,7 +31,7 @@ export function Modal({ title, onClose, children, footer }: ModalProps) {
   return createPortal(
     <div className="kd-modal__backdrop" onClick={onClose}>
       <div
-        className="kd-modal"
+        className={`kd-modal kd-modal--${size}`}
         role="dialog"
         aria-modal
         aria-label={title}
