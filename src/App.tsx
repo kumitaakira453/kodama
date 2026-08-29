@@ -42,7 +42,15 @@ export default function App() {
   useTheme();
   useRevisions();
 
-  const { projects, loading, reload, addProject, removeProject } = useProjects();
+  const {
+    projects,
+    loading,
+    reload,
+    addProject,
+    removeProject,
+    renameProject,
+    reorderProjects,
+  } = useProjects();
   const { reload: reloadDiff } = useDiff();
   const { viewed, toggle: toggleViewed, progress } = useViewed();
   const { threads, refresh: refreshThreads, add, reply, resolve, drop } =
@@ -188,6 +196,12 @@ export default function App() {
           onClose={() => setSettingsOpen(false)}
           onAddProject={handleAddProject}
           onRemoveProject={handleRemoveProject}
+          onRenameProject={(id, name) =>
+            void renameProject(id, name).catch(showError)
+          }
+          onReorderProjects={(ids) =>
+            void reorderProjects(ids).catch(showError)
+          }
           onReveal={revealAbsolute}
         />
       ) : null}

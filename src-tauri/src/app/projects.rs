@@ -54,6 +54,25 @@ pub fn add(state: &AppState, path: &str) -> KdResult<Project> {
     })
 }
 
+/// 並び順を差し替える。
+///
+/// 受け取った id の順に並べ、渡されなかったものは末尾へ回す。画面が古い一覧を
+/// 持っていても、登録済みのプロジェクトが消えない。
+pub fn reorder(state: &AppState, ids: &[String]) -> KdResult<Vec<Project>> {
+    state.update_config(|config| {
+        let mut rest = std::mem::take(&mut config.projects);
+        let mut ordered = Vec::with_capacity(rest.len());
+        for id in ids {
+            if let Some(at) = rest.iter().position(|p| &p.id == id) {
+                ordered.push(rest.remove(at));
+            }
+        }
+        ordered.extend(rest);
+        config.projects = ordered;
+        Ok(config.projects.clone())
+    })
+}
+
 pub fn remove(state: &AppState, id: &str) -> KdResult<()> {
     state.update_config(|config| {
         let before = config.projects.len();

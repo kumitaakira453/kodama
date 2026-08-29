@@ -27,6 +27,8 @@ export const api = {
   removeProject: (id: string) => invoke<void>("remove_project", { id }),
   renameProject: (id: string, name: string) =>
     invoke<Project>("rename_project", { id, name }),
+  reorderProjects: (ids: string[]) =>
+    invoke<Project[]>("reorder_projects", { ids }),
 
   listWorktrees: (projectId: string) =>
     invoke<WorktreeInfo[]>("list_worktrees", { projectId }),

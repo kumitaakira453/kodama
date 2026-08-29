@@ -1463,8 +1463,59 @@ button.kd-row__expand:hover {
   gap: 1px;
 }
 
+/* 名前そのものを押して書き換える。ボタンだと分かる装飾は hover まで出さない。 */
 .kd-projlist__name {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 4px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   font-weight: 600;
+  text-align: left;
+  cursor: text;
+}
+
+.kd-projlist__name:hover {
+  background: var(--kd-hover);
+  box-shadow: inset 0 0 0 1px var(--kd-border);
+}
+
+.kd-projlist__input {
+  width: 100%;
+  padding: 1px 4px;
+  margin-left: -4px;
+  border: 1px solid var(--kd-accent);
+  border-radius: 4px;
+  background: var(--kd-elevated);
+  color: var(--kd-fg);
+  font: inherit;
+  font-weight: 600;
+  outline: none;
+}
+
+/* 並べ替えは上下 1 段ずつ。掴んで動かすより取りこぼしがない。 */
+.kd-projlist__move {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  margin-right: 2px;
+}
+
+.kd-projlist__move .kd-iconbtn {
+  width: 22px;
+  height: 16px;
+}
+
+.kd-projlist__move .kd-iconbtn:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .kd-projlist__path {

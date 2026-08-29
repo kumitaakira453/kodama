@@ -128,7 +128,36 @@ export function useProjects() {
     [setProjects, setWorktrees, projectId, setProjectId, setWorktree],
   );
 
-  return { projects, loading, reload, addProject, removeProject };
+  const renameProject = useCallback(
+    async (id: string, name: string) => {
+      const updated = await api.renameProject(id, name);
+      setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    },
+    [setProjects],
+  );
+
+  const reorderProjects = useCallback(
+    async (ids: string[]) => {
+      // 押した順に見えるよう先に並べ替える。往復を待つと 1 段ずつが鈍い。
+      setProjects((prev) => {
+        const byId = new Map(prev.map((p) => [p.id, p]));
+        const next = ids.flatMap((id) => byId.get(id) ?? []);
+        return next.length === prev.length ? next : prev;
+      });
+      await api.reorderProjects(ids);
+    },
+    [setProjects],
+  );
+
+  return {
+    projects,
+    loading,
+    reload,
+    addProject,
+    removeProject,
+    renameProject,
+    reorderProjects,
+  };
 }
 
 /** 選択中プロジェクトの worktree 一覧。 */

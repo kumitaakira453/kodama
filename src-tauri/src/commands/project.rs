@@ -27,3 +27,11 @@ pub fn remove_project(state: State<'_, AppState>, id: String) -> KdResult<()> {
 pub fn rename_project(state: State<'_, AppState>, id: String, name: String) -> KdResult<Project> {
     projects::rename(&state, &id, &name)
 }
+
+#[tauri::command]
+pub fn reorder_projects(
+    state: State<'_, AppState>,
+    ids: Vec<String>,
+) -> KdResult<Vec<Project>> {
+    projects::reorder(&state, &ids)
+}

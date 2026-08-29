@@ -79,6 +79,7 @@ pub fn run() {
             commands::project::add_project,
             commands::project::remove_project,
             commands::project::rename_project,
+            commands::project::reorder_projects,
             commands::worktree::list_worktrees,
             commands::worktree::worktree_statuses,
             commands::worktree::pull_requests,
