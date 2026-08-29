@@ -9,6 +9,7 @@ import type {
   RevisionList,
   Side,
   ThreadView,
+  ViewedStatus,
   ViewMode,
   WorktreeInfo,
   WorktreeStatus,
@@ -139,6 +140,9 @@ export const settingsOpenAtom = atom<boolean>(false);
 // ---- 指摘 ----
 
 export const threadsAtom = atom<ThreadView[]>([]);
+
+/** ファイルのパス → 閲覧済みの状態。3 値で持つ。 */
+export const viewedAtom = atom<Record<string, ViewedStatus>>({});
 
 /** 行番号 gutter で選んでいる範囲。指摘の対象になる。 */
 export interface LineSelection {

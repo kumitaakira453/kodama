@@ -1,6 +1,7 @@
 //! 比較指定の解決と、差分の取得・構造化。
 
 use crate::domain::diff::{DiffFile, DiffFileStatus, DiffHunk, DiffLineKind, DiffResponse};
+use crate::domain::generated;
 use crate::domain::ids;
 use crate::domain::rows::build_rows;
 use crate::domain::spec::{revision_key, BlobRef, DiffSpec, ResolvedSpec};
@@ -161,14 +162,15 @@ fn to_dto(parsed: ParsedFile) -> DiffFile {
         apply_inline(hunk);
     }
 
+    let path = parsed.path;
     DiffFile {
-        path: parsed.path,
+        generated: generated::looks_generated(&path),
+        path,
         old_path: parsed.old_path,
         status: parsed.status,
         additions,
         deletions,
         binary: parsed.binary,
-        generated: false,
         syntax: None,
         truncated,
         diff_hash: ids::diff_hash(&parsed.raw),

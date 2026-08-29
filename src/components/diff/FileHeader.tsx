@@ -1,10 +1,12 @@
-import type { DiffFile } from "../../lib/types";
+import type { DiffFile, ViewedStatus } from "../../lib/types";
 import { Icon } from "../ui/Icon";
 
 interface FileHeaderProps {
   file: DiffFile;
   collapsed: boolean;
+  viewed: ViewedStatus;
   onToggle: () => void;
+  onToggleViewed: (path: string) => void;
   onReveal: (path: string) => void;
   /** 上端に固定して出しているヘッダか。影の有無だけが変わる。 */
   pinned?: boolean;
@@ -14,7 +16,9 @@ interface FileHeaderProps {
 export function FileHeader({
   file,
   collapsed,
+  viewed,
   onToggle,
+  onToggleViewed,
   onReveal,
   pinned = false,
 }: FileHeaderProps) {
@@ -50,6 +54,20 @@ export function FileHeader({
       </span>
 
       {file.generated ? <span className="kd-chip">生成</span> : null}
+      {viewed === "stale" ? (
+        <span className="kd-fhead__stale" title="閲覧後に変わっています">
+          変更あり
+        </span>
+      ) : null}
+
+      <label className="kd-fhead__viewed" title="読み終えたら印を付ける (v)">
+        <input
+          type="checkbox"
+          checked={viewed === "viewed"}
+          onChange={() => onToggleViewed(file.path)}
+        />
+        閲覧済
+      </label>
 
       <button
         className="kd-fhead__action"

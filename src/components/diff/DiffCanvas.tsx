@@ -11,7 +11,7 @@ import {
   rowHeight,
   type RowItem,
 } from "../../lib/diff/rows";
-import type { DiffFile, DiffLine, Side } from "../../lib/types";
+import type { DiffFile, DiffLine, Side, ViewedStatus } from "../../lib/types";
 import {
   collapsedFilesAtom,
   currentFileAtom,
@@ -31,6 +31,8 @@ import { DiffCode } from "./DiffCode";
 import { FileHeader } from "./FileHeader";
 
 interface DiffCanvasProps {
+  viewed: Record<string, ViewedStatus>;
+  onToggleViewed: (path: string) => void;
   onReveal: (path: string) => void;
 }
 
@@ -50,7 +52,7 @@ interface GutterHit {
  * スクロールコンテナはこれと左ツリーの 2 つだけ。入れ子にすると、親と子の
  * どちらが動くのか予測できなくなる。
  */
-export function DiffCanvas({ onReveal }: DiffCanvasProps) {
+export function DiffCanvas({ viewed, onToggleViewed, onReveal }: DiffCanvasProps) {
   const diff = useAtomValue(diffAtom);
   const loading = useAtomValue(diffLoadingAtom);
   const mode = useAtomValue(viewModeAtom);
@@ -242,7 +244,9 @@ export function DiffCanvas({ onReveal }: DiffCanvasProps) {
           <FileHeader
             file={pinnedFile}
             collapsed={collapsed.has(pinnedFile.path)}
+            viewed={viewed[pinnedFile.path] ?? "unviewed"}
             onToggle={() => toggleFile(pinnedFile.path)}
+            onToggleViewed={onToggleViewed}
             onReveal={onReveal}
             pinned
           />
@@ -271,6 +275,8 @@ export function DiffCanvas({ onReveal }: DiffCanvasProps) {
                 row={rows[item.index]}
                 wordDiff={wordDiff}
                 selection={selection}
+                viewed={viewed}
+                onToggleViewed={onToggleViewed}
                 onToggle={toggleFile}
                 onReveal={onReveal}
                 onGutter={onGutter}
@@ -292,6 +298,8 @@ interface RowProps {
   row: RowItem;
   wordDiff: boolean;
   selection: LineSelection | null;
+  viewed: Record<string, ViewedStatus>;
+  onToggleViewed: (path: string) => void;
   onToggle: (path: string) => void;
   onReveal: (path: string) => void;
   onGutter: (hit: GutterHit) => void;
@@ -306,6 +314,8 @@ function Row({
   row,
   wordDiff,
   selection,
+  viewed,
+  onToggleViewed,
   onToggle,
   onReveal,
   onGutter,
@@ -321,7 +331,9 @@ function Row({
         <FileHeader
           file={row.file}
           collapsed={row.collapsed}
+          viewed={viewed[row.file.path] ?? "unviewed"}
           onToggle={() => onToggle(row.file.path)}
+          onToggleViewed={onToggleViewed}
           onReveal={onReveal}
         />
       );

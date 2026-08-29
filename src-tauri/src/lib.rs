@@ -91,6 +91,9 @@ pub fn run() {
             commands::review::resolve_thread,
             commands::review::reopen_thread,
             commands::review::drop_thread,
+            commands::viewed::list_viewed,
+            commands::viewed::set_viewed,
+            commands::viewed::clear_viewed,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

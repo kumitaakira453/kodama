@@ -15,6 +15,7 @@ import { Toasts } from "./components/ui/Toasts";
 import { useDiff } from "./hooks/useDiff";
 import { useProjects } from "./hooks/useProjects";
 import { useRevisions } from "./hooks/useRevisions";
+import { useViewed } from "./hooks/useViewed";
 import { useTheme } from "./hooks/useTheme";
 import { useToast } from "./hooks/useToast";
 import {
@@ -35,6 +36,7 @@ export default function App() {
 
   const { projects, loading, reload, addProject, removeProject } = useProjects();
   const { reload: reloadDiff } = useDiff();
+  const { viewed, toggle: toggleViewed, progress } = useViewed();
   const { showError } = useToast();
 
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
@@ -143,7 +145,7 @@ export default function App() {
   if (projects.length === 0) {
     return (
       <div className="kd-shell">
-        <TopBar projects={projects} onReload={reloadAll} />
+        <TopBar projects={projects} progress={progress} onReload={reloadAll} />
         <EmptyProjects onAddProject={handleAddProject} dragging={dragging} />
         <Toasts />
       </div>
@@ -152,7 +154,7 @@ export default function App() {
 
   return (
     <div className="kd-shell" data-dragging={dragging || undefined}>
-      <TopBar projects={projects} onReload={reloadAll} />
+      <TopBar projects={projects} progress={progress} onReload={reloadAll} />
 
       <div className="kd-body">
         {sidebarOpen ? (
@@ -167,7 +169,11 @@ export default function App() {
         ) : null}
 
         <main className="kd-main">
-          <DiffCanvas onReveal={revealInWorktree} />
+          <DiffCanvas
+            viewed={viewed}
+            onToggleViewed={toggleViewed}
+            onReveal={revealInWorktree}
+          />
         </main>
       </div>
 

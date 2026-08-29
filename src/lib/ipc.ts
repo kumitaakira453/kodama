@@ -10,6 +10,7 @@ import type {
   Thread,
   ThreadInput,
   ThreadView,
+  ViewedState,
   WorktreeInfo,
   WorktreeStatus,
 } from "./types";
@@ -44,6 +45,18 @@ export const api = {
     path: string,
     context: number,
   ) => invoke<DiffFile | null>("file_diff", { worktree, spec, path, context }),
+
+  listViewed: (revisionKey: string, current: Record<string, string>) =>
+    invoke<ViewedState[]>("list_viewed", { revisionKey, current }),
+  setViewed: (
+    revisionKey: string,
+    file: string,
+    diffHash: string,
+    viewedFlag: boolean,
+  ) =>
+    invoke<void>("set_viewed", { revisionKey, file, diffHash, viewedFlag }),
+  clearViewed: (revisionKey: string) =>
+    invoke<void>("clear_viewed", { revisionKey }),
 
   listThreads: (
     worktree: string | null,

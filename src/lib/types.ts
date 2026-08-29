@@ -250,8 +250,6 @@ export type ViewedStatus = "unviewed" | "viewed" | "stale";
 export interface ViewedState {
   file: string;
   status: ViewedStatus;
-  diffHash: string;
-  viewedAt: number;
 }
 
 export type ViewMode = "split" | "unified";

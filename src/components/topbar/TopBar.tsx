@@ -13,6 +13,8 @@ import {
 import { IconButton } from "../ui/Button";
 import { Dropdown } from "../ui/Dropdown";
 import { Icon } from "../ui/Icon";
+import type { ReviewProgress } from "../../hooks/useViewed";
+import { ProgressRing } from "../review/ProgressRing";
 import { RevisionMenu } from "./RevisionMenu";
 import { WorktreeMenu } from "./WorktreeMenu";
 
@@ -36,6 +38,7 @@ const THEME_LABEL: Record<Theme, string> = {
 
 interface TopBarProps {
   projects: Project[];
+  progress: ReviewProgress;
   onReload: () => void;
 }
 
@@ -43,7 +46,7 @@ interface TopBarProps {
  * ドラッグ領域はこのコンテナだけに付ける。`data-tauri-drag-region` を持つ要素の
  * 子はドラッグ対象から外れるので、ボタン側に打ち消しの指定は要らない。
  */
-export function TopBar({ projects, onReload }: TopBarProps) {
+export function TopBar({ projects, progress, onReload }: TopBarProps) {
   const [theme, setTheme] = useAtom(themeAtom);
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
   const [projectId, setProjectId] = useAtom(selectedProjectIdAtom);
@@ -119,6 +122,8 @@ export function TopBar({ projects, onReload }: TopBarProps) {
           </span>
         </span>
       ) : null}
+
+      <ProgressRing progress={progress} />
 
       <IconButton name="refresh" label="再読込 (⌘R)" onClick={onReload} />
       <IconButton

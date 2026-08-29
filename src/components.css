@@ -1670,3 +1670,74 @@
   background: var(--kd-accent);
   color: #fff;
 }
+
+/* ==========================================================================
+   閲覧済みと進捗
+   ========================================================================== */
+
+.kd-fhead__viewed {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border: 1px solid var(--kd-border-strong);
+  border-radius: var(--kd-radius-sm);
+  color: var(--kd-fg-dim);
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-fhead__viewed:hover {
+  background: var(--kd-hover);
+}
+
+.kd-fhead__viewed input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--kd-accent);
+  cursor: pointer;
+}
+
+.kd-fhead__viewed:has(input:checked) {
+  color: var(--kd-accent);
+  border-color: color-mix(in srgb, var(--kd-accent) 50%, transparent);
+}
+
+.kd-fhead__stale {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kd-accent-2) 22%, transparent);
+  color: var(--kd-accent-2);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.kd-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding-right: 4px;
+  color: var(--kd-muted);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-progress__done {
+  transition: stroke-dasharray var(--kd-dur-base) var(--kd-ease-out);
+}
+
+.kd-progress__text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kd-progress__stale {
+  color: var(--kd-accent-2);
+}
