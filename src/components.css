@@ -193,6 +193,7 @@
 }
 
 .kd-dd__label {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -269,6 +270,7 @@
 }
 
 .kd-menuitem__text {
+  min-width: 0;
   flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -711,6 +713,7 @@
 }
 
 .kd-dir__name {
+  min-width: 0;
   flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -782,6 +785,9 @@
 }
 
 .kd-file__name {
+  /* flex の既定は min-width: auto で、内容より縮まない。これが無いと
+     overflow: hidden が効かず、名前が右の要素の上に伸びて重なる。 */
+  min-width: 0;
   flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1431,6 +1437,7 @@ button.kd-row__expand:hover {
 }
 
 .kd-hunk__text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1671,6 +1678,7 @@ button.kd-row__expand:hover {
 }
 
 .kd-projlist__name {
+  min-width: 0;
   align-self: flex-start;
   max-width: 100%;
   overflow: hidden;
@@ -1724,6 +1732,7 @@ button.kd-row__expand:hover {
 }
 
 .kd-projlist__path {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2149,6 +2158,7 @@ button.kd-row__expand:hover {
 }
 
 .kd-wtrow__name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2172,6 +2182,7 @@ button.kd-row__expand:hover {
 }
 
 .kd-wtrow__subject {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2190,6 +2201,7 @@ button.kd-row__expand:hover {
 }
 
 .kd-wtrow__branch {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2223,6 +2235,7 @@ button.kd-row__expand:hover {
 }
 
 .kd-wtrow__prtitle {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2711,3 +2724,383 @@ button.kd-row__expand:hover {
 .kd-appear__dot[data-tok="function"] { background: var(--kd-t-function); }
 .kd-appear__dot[data-tok="type"] { background: var(--kd-t-type); }
 .kd-appear__dot[data-tok="comment"] { background: var(--kd-t-comment); }
+
+/* ==========================================================================
+   会話（指摘のカード・一覧）
+   ========================================================================== */
+
+/* 発言者の顔。名前を読む前に、人か AI かが色と形で分かる。 */
+.kd-comment__avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+}
+
+.kd-comment__avatar--sm {
+  width: 17px;
+  height: 17px;
+}
+
+.kd-comment[data-who="you"] .kd-comment__avatar,
+.kd-comment__avatar[data-who="you"] {
+  border-color: color-mix(in srgb, var(--kd-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--kd-accent) 14%, transparent);
+  color: var(--kd-accent);
+}
+
+.kd-comment[data-who="ai"] .kd-comment__avatar,
+.kd-comment__avatar[data-who="ai"] {
+  border-color: color-mix(in srgb, var(--kd-accent-2) 50%, transparent);
+  background: color-mix(in srgb, var(--kd-accent-2) 16%, transparent);
+  color: var(--kd-accent-2);
+}
+
+.kd-comment[data-who="other"] .kd-comment__avatar,
+.kd-comment__avatar[data-who="other"] {
+  border-color: var(--kd-border-strong);
+  background: var(--kd-hover);
+  color: var(--kd-muted);
+}
+
+.kd-comment {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.kd-comment__main {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 7px 10px;
+  border: 1px solid var(--kd-border);
+  border-radius: var(--kd-radius-md);
+  background: var(--kd-bg);
+}
+
+/* 発言者ごとに縁の色を変える。カードの中に人と AI が交互に並ぶので、
+   顔だけだと、どこまでが誰の話か目で追えない。 */
+.kd-comment[data-who="you"] .kd-comment__main {
+  border-color: color-mix(in srgb, var(--kd-accent) 28%, var(--kd-border));
+}
+
+.kd-comment[data-who="ai"] .kd-comment__main {
+  border-color: color-mix(in srgb, var(--kd-accent-2) 30%, var(--kd-border));
+}
+
+.kd-comment__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.kd-comment__author {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.kd-comment__time {
+  color: var(--kd-muted);
+  font-size: 10.5px;
+}
+
+.kd-comment__body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12.5px;
+  line-height: 1.75;
+}
+
+/* 本文に混じる識別子。地の文と地続きだと読み違える。 */
+.kd-code-inline {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--kd-muted) 14%, transparent);
+  font-family: var(--kd-font-mono);
+  font-size: 0.92em;
+}
+
+.kd-thread__where {
+  flex: 0 0 auto;
+  font-weight: 600;
+  color: var(--kd-fg-dim);
+}
+
+.kd-thread__notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kd-accent-2);
+}
+
+.kd-thread__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kd-thread__reply {
+  align-items: flex-start;
+}
+
+/* ==========================================================================
+   指摘の一覧（ドロワー）
+   ========================================================================== */
+
+.kd-drawer {
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  flex: 0 0 auto;
+  min-height: 0;
+  border-left: 1px solid var(--kd-border);
+  background: var(--kd-sidebar);
+  animation: kd-drawer-in var(--kd-dur-fast) var(--kd-ease-out);
+}
+
+@keyframes kd-drawer-in {
+  from {
+    transform: translateX(12px);
+    opacity: 0;
+  }
+}
+
+.kd-drawer__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 8px 0 14px;
+  border-bottom: 1px solid var(--kd-border);
+  color: var(--kd-muted);
+}
+
+.kd-drawer__title {
+  margin: 0;
+  color: var(--kd-fg);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.kd-drawer__count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kd-accent) 18%, transparent);
+  color: var(--kd-accent);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-drawer__spacer {
+  flex: 1 1 auto;
+}
+
+.kd-drawer__toggle {
+  padding: 3px 8px;
+  border: 1px solid var(--kd-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--kd-muted);
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.kd-drawer__toggle[data-on] {
+  border-color: var(--kd-accent);
+  color: var(--kd-accent);
+}
+
+.kd-drawer__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 10px 10px 40px;
+}
+
+.kd-drawer__empty {
+  margin: 40px 0;
+  color: var(--kd-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.kd-drawer__group {
+  margin-bottom: 16px;
+}
+
+.kd-drawer__file {
+  display: flex;
+  align-items: baseline;
+  margin: 0 0 6px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-family: var(--kd-font-mono);
+  font-weight: 400;
+}
+
+.kd-drawer__dir {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kd-muted);
+}
+
+.kd-drawer__name {
+  flex: 0 0 auto;
+  color: var(--kd-fg);
+  font-weight: 600;
+}
+
+.kd-entry {
+  display: block;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--kd-border);
+  border-radius: var(--kd-radius-md);
+  background: var(--kd-panel);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--kd-dur-instant) var(--kd-ease-out),
+    background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-entry:hover {
+  border-color: var(--kd-border-strong);
+  background: var(--kd-elevated);
+}
+
+.kd-entry[data-resolved] {
+  opacity: 0.55;
+}
+
+.kd-entry__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 5px;
+}
+
+/* 顔は少し重ねる。人数が増えても幅を食わない。 */
+.kd-entry__faces {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.kd-entry__faces > * + * {
+  margin-left: -5px;
+}
+
+.kd-entry__line {
+  color: var(--kd-muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kd-entry__badge {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--kd-hover);
+  color: var(--kd-muted);
+  font-size: 10px;
+}
+
+.kd-entry__time {
+  flex: 0 0 auto;
+  color: var(--kd-muted);
+  font-size: 10px;
+}
+
+/* 抜粋は 3 行まで。長い指摘で一覧が縦に伸びると、見渡す用を成さない。 */
+.kd-entry__excerpt {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.65;
+  word-break: break-word;
+}
+
+.kd-entry__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  color: var(--kd-muted);
+  font-size: 10.5px;
+}
+
+.kd-entry__context {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--kd-font-mono);
+}
+
+.kd-entry__replies {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* 上部バーの指摘ボタン。件数が 0 のときは印だけにする。 */
+.kd-topbar__threads {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: var(--kd-radius-md);
+  background: transparent;
+  color: var(--kd-muted);
+  cursor: pointer;
+  transition:
+    background var(--kd-dur-instant) var(--kd-ease-out),
+    color var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-topbar__threads:hover {
+  background: var(--kd-hover);
+  color: var(--kd-fg);
+}
+
+.kd-topbar__threads[data-on] {
+  border-color: color-mix(in srgb, var(--kd-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--kd-accent) 12%, transparent);
+  color: var(--kd-accent);
+}
+
+.kd-topbar__threadcount {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ツリーの指摘の印。件数が付くので、点だけより何件あるかが分かる。 */
+.kd-file__threads {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kd-accent) 16%, transparent);
+  color: var(--kd-accent);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}

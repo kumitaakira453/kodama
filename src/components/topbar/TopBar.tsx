@@ -8,10 +8,12 @@ import {
   selectedProjectIdAtom,
   selectedWorktreeAtom,
   appearanceOpenAtom,
+  commentsOpenAtom,
   settingsOpenAtom,
   shortcutsOpenAtom,
   sidebarOpenAtom,
   themeAtom,
+  threadsAtom,
   viewModeAtom,
   type Theme,
 } from "../../state/atoms";
@@ -136,7 +138,13 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
   const [projectId, setProjectId] = useAtom(selectedProjectIdAtom);
   const setWorktree = useSetAtom(selectedWorktreeAtom);
   const setSettingsOpen = useSetAtom(settingsOpenAtom);
+  const [commentsOpen, setCommentsOpen] = useAtom(commentsOpenAtom);
+  const threads = useAtomValue(threadsAtom);
   const diff = useAtomValue(diffAtom);
+
+  const openThreads = threads.filter(
+    (v) => v.thread.status.kind === "open",
+  ).length;
 
   const project = projects.find((p) => p.id === projectId) ?? projects[0];
 
@@ -210,6 +218,19 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
           </span>
         </span>
       ) : null}
+
+      {/* 未解決の数は、閲覧の進みと同じくらい先に知りたい。押すと一覧が開く。 */}
+      <button
+        className="kd-topbar__threads"
+        data-on={commentsOpen || undefined}
+        onClick={() => setCommentsOpen(!commentsOpen)}
+        title="指摘の一覧"
+      >
+        <Icon name="forum" size={16} />
+        {openThreads > 0 ? (
+          <span className="kd-topbar__threadcount">{openThreads}</span>
+        ) : null}
+      </button>
 
       <ProgressRing progress={progress} />
 

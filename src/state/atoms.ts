@@ -190,9 +190,12 @@ export const showViewedAtom = atomWithStorage<boolean>(
  * 同じファイルを続けて押しても届くよう、通し番号を添える。ref を親から
  * 配って回すより、要求を状態として置く方が経路が 1 本で済む。
  */
-export const jumpRequestAtom = atom<{ path: string; nonce: number } | null>(
-  null,
-);
+export const jumpRequestAtom = atom<{
+  path: string;
+  /** ここまで飛ぶ。指定が無ければファイルの先頭。 */
+  thread?: string;
+  nonce: number;
+} | null>(null);
 
 // ---- 一時状態 ----
 
@@ -206,6 +209,8 @@ export const toastsAtom = atom<Toast[]>([]);
 export const settingsOpenAtom = atom<boolean>(false);
 export const shortcutsOpenAtom = atom<boolean>(false);
 export const appearanceOpenAtom = atom<boolean>(false);
+/** 指摘の一覧を出しているか。 */
+export const commentsOpenAtom = atom<boolean>(false);
 /** 絞り込み欄へフォーカスを移す要求。通し番号で毎回届かせる。 */
 export const focusFilterAtom = atom<number>(0);
 
@@ -245,6 +250,21 @@ export const collapsedFilesAtom = atom<Set<string>>((get) =>
     get(fileOpenOverridesAtom),
   ),
 );
+
+/**
+ * ファイルごとの未解決の指摘の数。
+ *
+ * 一覧を毎回なめ直すのではなく、ここで 1 度だけ数える。ツリーの行は仮想化
+ * されていて描き直しが多いので、行ごとに数えると件数 × 行の回数になる。
+ */
+export const openThreadCountsAtom = atom<Record<string, number>>((get) => {
+  const counts: Record<string, number> = {};
+  for (const view of get(threadsAtom)) {
+    if (view.thread.status.kind !== "open") continue;
+    counts[view.thread.file] = (counts[view.thread.file] ?? 0) + 1;
+  }
+  return counts;
+});
 
 /** 行番号 gutter で選んでいる範囲。指摘の対象になる。 */
 export interface LineSelection {

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DiffCanvas } from "./components/diff/DiffCanvas";
 import { EmptyProjects } from "./components/empty/EmptyProjects";
 import { AppearanceModal } from "./components/appearance/AppearanceModal";
+import { CommentsDrawer } from "./components/review/CommentsDrawer";
 import { SettingsModal } from "./components/projects/SettingsModal";
 import { TopBar } from "./components/topbar/TopBar";
 import { TreePane } from "./components/tree/TreePane";
@@ -31,6 +32,7 @@ import {
   focusFilterAtom,
   settingsOpenAtom,
   appearanceOpenAtom,
+  commentsOpenAtom,
   shortcutsOpenAtom,
   sidebarOpenAtom,
   sidebarWidthAtom,
@@ -68,6 +70,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useAtom(settingsOpenAtom);
   const [shortcutsOpen, setShortcutsOpen] = useAtom(shortcutsOpenAtom);
   const [appearanceOpen, setAppearanceOpen] = useAtom(appearanceOpenAtom);
+  const [commentsOpen, setCommentsOpen] = useAtom(commentsOpenAtom);
   const setFocusFilter = useSetAtom(focusFilterAtom);
   const worktree = useAtomValue(selectedWorktreeAtom);
   const setJump = useSetAtom(jumpRequestAtom);
@@ -191,6 +194,13 @@ export default function App() {
             }
           />
         </main>
+
+        {commentsOpen ? (
+          <CommentsDrawer
+            threads={threads}
+            onClose={() => setCommentsOpen(false)}
+          />
+        ) : null}
       </div>
 
       {settingsOpen ? (

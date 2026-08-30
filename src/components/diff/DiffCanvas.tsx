@@ -315,13 +315,37 @@ export function DiffCanvas({
    */
   useEffect(() => {
     if (!jump) return;
-    const index = headerIndex.get(jump.path);
-    if (index !== undefined) {
-      setOverrides((prev) => ({ ...prev, [jump.path]: true }));
-      virtualizer.scrollToIndex(index, { align: "start" });
+    const header = headerIndex.get(jump.path);
+    if (header === undefined) {
+      // 絞り込みで消えているファイルには飛べない。何も起きないと壊れて見える。
+      showError(new Error("そのファイルは絞り込みで隠れています"));
+      setJump(null);
+      return;
     }
+    if (collapsed.has(jump.path)) {
+      // 畳んだままでは中の行がまだ並んでいない。開くだけにして、要求は
+      // 残す。次の描画で行が揃ってから位置を決める。
+      setOverrides((prev) => ({ ...prev, [jump.path]: true }));
+      return;
+    }
+    // 指摘を指していれば、その行まで。無ければファイルの先頭で足りる。
+    const target = jump.thread
+      ? rows.findIndex((r) => r.key === `${jump.path}::t${jump.thread}`)
+      : -1;
+    virtualizer.scrollToIndex(target >= 0 ? target : header, {
+      align: target >= 0 ? "center" : "start",
+    });
     setJump(null);
-  }, [jump, headerIndex, virtualizer, setJump, setOverrides]);
+  }, [
+    jump,
+    headerIndex,
+    rows,
+    collapsed,
+    virtualizer,
+    setJump,
+    setOverrides,
+    showError,
+  ]);
 
   // 仮想化は行 DOM を再利用する。スクロール中にトランジションが走ると色が
   // 補間され続けて濁るので、動いている間だけ止める。

@@ -11,6 +11,7 @@ import {
   fileFilterAtom,
   focusFilterAtom,
   hiddenExtensionsAtom,
+  openThreadCountsAtom,
   showDeletedAtom,
   showViewedAtom,
   visibleFilesAtom,
@@ -54,6 +55,7 @@ export function TreePane({ onJump }: TreePaneProps) {
 
   const files = diff?.files ?? [];
   const visible = useAtomValue(visibleFilesAtom);
+  const threadCounts = useAtomValue(openThreadCountsAtom);
 
   const { normal, generated } = useMemo(
     () => ({
@@ -135,6 +137,7 @@ export function TreePane({ onJump }: TreePaneProps) {
                     name={row.name}
                     depth={row.depth}
                     active={row.file.path === current}
+                    threads={threadCounts[row.file.path] ?? 0}
                     onJump={onJump}
                   />
                 ) : (
@@ -172,6 +175,7 @@ export function TreePane({ onJump }: TreePaneProps) {
                     name={f.path}
                     depth={1}
                     active={f.path === current}
+                    threads={threadCounts[f.path] ?? 0}
                     onJump={onJump}
                   />
                 ))
@@ -316,12 +320,15 @@ function FileRow({
   name,
   depth,
   active,
+  threads,
   onJump,
 }: {
   file: DiffFile;
   name: string;
   depth: number;
   active: boolean;
+  /** 未解決の指摘の数。0 なら何も出さない。 */
+  threads: number;
   onJump: (path: string) => void;
 }) {
   return (
@@ -336,6 +343,12 @@ function FileRow({
         {STATUS_MARK[file.status]}
       </span>
       <span className="kd-file__name">{name}</span>
+      {threads > 0 ? (
+        <span className="kd-file__threads" title={`未解決の指摘 ${threads} 件`}>
+          <Icon name="chat_bubble" size={11} />
+          {threads}
+        </span>
+      ) : null}
       {file.binary ? (
         <span className="kd-file__binary">bin</span>
       ) : (
