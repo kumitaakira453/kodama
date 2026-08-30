@@ -146,10 +146,10 @@ function ThreadEntry({
           {faces.map((f) => (
             <span
               key={f.kind + f.label}
-              className="kd-comment__avatar kd-comment__avatar--sm"
+              className="kd-face kd-face--sm"
               data-who={f.kind}
             >
-              <Icon name={f.icon} size={11} />
+              {f.initial}
             </span>
           ))}
         </span>
