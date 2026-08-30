@@ -6,14 +6,19 @@
 
 use std::sync::LazyLock;
 
-use syntect::parsing::{ParseState, Scope, ScopeStack, SyntaxSet};
+use syntect::parsing::{ParseState, Scope, ScopeStack, SyntaxReference, SyntaxSet};
 use syntect::util::LinesWithEndings;
 
 use crate::domain::diff::{Token, TokenKind};
 use crate::domain::scope::SCOPE_MAP;
 
 /// バンドル済みの構文定義。読み込みに 100ms 前後かかるので 1 度だけ作る。
-static SYNTAXES: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_newlines);
+///
+/// syntect の既定セットは Sublime の標準パックそのままで、TypeScript も JSX も
+/// 入っていない。TS/TSX のリポジトリではどの行にも色が付かない。two-face が
+/// 束ねている拡張セット（bat と同じ出所）に差し替えて、実際に読むファイルを
+/// 覆う。既定セットは含まれているので、これまで色が付いていた言語は変わらない。
+static SYNTAXES: LazyLock<SyntaxSet> = LazyLock::new(two_face::syntax::extra_newlines);
 
 /// 対応表を `Scope` に変換したもの。文字列比較より前置判定の方が速い。
 static MATCHERS: LazyLock<Vec<(Scope, TokenKind)>> = LazyLock::new(|| {
@@ -38,6 +43,23 @@ pub struct Highlighted {
 ///
 /// 構文を判別できない、または上限を超える場合は None。呼び出し側はプレーン描画に
 /// フォールバックする。
+/// どの構文定義にも登録されていない拡張子を、近い定義へ寄せる。
+///
+/// `.jsx` はどのパックにも紐づいていないが、JSX は TypeScriptReact がそのまま
+/// 読める。拡張子が登録されていないだけで色を諦めると、React のリポジトリに
+/// 穴が空く。
+const ALIASES: &[(&str, &str)] = &[
+    ("jsx", "TypeScriptReact"),
+    ("mjs", "JavaScript"),
+    ("cjs", "JavaScript"),
+];
+
+fn by_alias<'a>(syntaxes: &'a SyntaxSet, path: &str) -> Option<&'a SyntaxReference> {
+    let ext = path.rsplit_once('.')?.1;
+    let (_, name) = ALIASES.iter().find(|(e, _)| *e == ext)?;
+    syntaxes.find_syntax_by_name(name)
+}
+
 pub fn highlight_file(path: &str, text: &str) -> Option<Highlighted> {
     if text.len() > MAX_BYTES {
         return None;
@@ -47,6 +69,7 @@ pub fn highlight_file(path: &str, text: &str) -> Option<Highlighted> {
         .find_syntax_for_file(path)
         .ok()
         .flatten()
+        .or_else(|| by_alias(syntaxes, path))
         .or_else(|| syntaxes.find_syntax_by_first_line(text.lines().next().unwrap_or("")))?;
     if syntax.name == "Plain Text" {
         return None;
@@ -220,5 +243,29 @@ mod tests {
     #[test]
     fn 未知の拡張子では諦める() {
         assert!(highlight_file("a.unknownext", "hello\n").is_none());
+    }
+
+    /// 既定の構文セットには TypeScript も JSX も無く、TS のリポジトリでは
+    /// 1 行も色が付かなかった。日常的に読む拡張子を並べて取りこぼしを防ぐ。
+    #[test]
+    fn 日常的に読む拡張子を覆う() {
+        for (path, text) in [
+            ("a.ts", "const x: number = 1;\n"),
+            ("a.tsx", "const A = () => <div />;\n"),
+            ("a.jsx", "const A = () => <div />;\n"),
+            ("a.vue", "<template><div /></template>\n"),
+            ("a.svelte", "<script>let a = 1;</script>\n"),
+            ("a.toml", "[package]\nname = \"a\"\n"),
+            ("a.kt", "fun main() {}\n"),
+            ("a.swift", "let x = 1\n"),
+            ("a.dart", "void main() {}\n"),
+            ("a.tf", "resource \"a\" \"b\" {}\n"),
+            ("a.zig", "const x = 1;\n"),
+            ("Dockerfile", "FROM alpine\n"),
+            ("a.graphql", "query { a }\n"),
+            ("a.proto", "message A {}\n"),
+        ] {
+            assert!(highlight_file(path, text).is_some(), "色が付かない: {path}");
+        }
     }
 }

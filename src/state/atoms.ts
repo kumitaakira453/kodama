@@ -1,6 +1,7 @@
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
+import { DEFAULT_FONT, DEFAULT_SYNTAX } from "../lib/appearance";
 import { collapsedFiles } from "../lib/diff/collapse";
 import { applyFilter, type FileFilter } from "../lib/diff/filter";
 import type { CommitSelection } from "../lib/revisions";
@@ -56,6 +57,32 @@ export const wrapLinesAtom = atomWithStorage<boolean>(
   undefined,
   sync,
 );
+/**
+ * 構文の配色。ライトとダークで別に持つ。
+ *
+ * 1 つにまとめると、明暗を切り替えたときに背景と合わない配色が残る。
+ * VS Code が明暗別に持っているのと同じ理由。
+ */
+export const syntaxLightAtom = atomWithStorage<string>(
+  "kodama.syntaxLight",
+  DEFAULT_SYNTAX,
+  undefined,
+  sync,
+);
+export const syntaxDarkAtom = atomWithStorage<string>(
+  "kodama.syntaxDark",
+  DEFAULT_SYNTAX,
+  undefined,
+  sync,
+);
+/** 差分の本文の書体。 */
+export const codeFontAtom = atomWithStorage<string>(
+  "kodama.codeFont",
+  DEFAULT_FONT,
+  undefined,
+  sync,
+);
+
 export const contextLinesAtom = atomWithStorage<number>(
   "kodama.contextLines",
   3,
@@ -178,6 +205,7 @@ export interface Toast {
 export const toastsAtom = atom<Toast[]>([]);
 export const settingsOpenAtom = atom<boolean>(false);
 export const shortcutsOpenAtom = atom<boolean>(false);
+export const appearanceOpenAtom = atom<boolean>(false);
 /** 絞り込み欄へフォーカスを移す要求。通し番号で毎回届かせる。 */
 export const focusFilterAtom = atom<number>(0);
 

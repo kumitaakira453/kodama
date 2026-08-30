@@ -7,6 +7,7 @@ import {
   diffAtom,
   selectedProjectIdAtom,
   selectedWorktreeAtom,
+  appearanceOpenAtom,
   settingsOpenAtom,
   shortcutsOpenAtom,
   sidebarOpenAtom,
@@ -56,6 +57,7 @@ const UPDATE_HINT: Record<UpdateStatus, string> = {
  */
 function AppMenu() {
   const setShortcutsOpen = useSetAtom(shortcutsOpenAtom);
+  const setAppearanceOpen = useSetAtom(appearanceOpenAtom);
   const setNonce = useSetAtom(updateCheckNonceAtom);
   const status = useAtomValue(updateStatusAtom);
   const [version, setVersion] = useState<string | null>(null);
@@ -87,6 +89,17 @@ function AppMenu() {
             {UPDATE_HINT[status] ? (
               <span className="kd-menuitem__hint">{UPDATE_HINT[status]}</span>
             ) : null}
+          </button>
+
+          <button
+            className="kd-menuitem"
+            onClick={() => {
+              setAppearanceOpen(true);
+              close();
+            }}
+          >
+            <Icon name="palette" size={15} />
+            <span className="kd-menuitem__text">表示</span>
           </button>
 
           <button

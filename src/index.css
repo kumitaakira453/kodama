@@ -298,3 +298,241 @@ button {
   line-height: 1;
   user-select: none;
 }
+
+/* ==========================================================================
+   配色（構文）
+
+   `data-syntax` を根に立てて、トークンの色だけを差し替える。土台のテーマ
+   （紙・枠・差分の帯）はそのまま残すので、どれを選んでも kodama の地の色に
+   乗る。既定（木漏れ日 / 夜の林）は上の :root と [data-theme] の値がそのまま
+   効くよう、ここに block を置かない。
+   ========================================================================== */
+
+:root[data-syntax="github-light"],
+[data-syntax-preview="github-light"] {
+  --kd-t-keyword: #cf222e;
+  --kd-t-string: #0a3069;
+  --kd-t-comment: #6e7781;
+  --kd-t-number: #0550ae;
+  --kd-t-function: #8250df;
+  --kd-t-type: #953800;
+  --kd-t-variable: #24292f;
+  --kd-t-constant: #0550ae;
+  --kd-t-operator: #cf222e;
+  --kd-t-punctuation: #57606a;
+  --kd-t-tag: #116329;
+  --kd-t-attribute: #0550ae;
+}
+
+:root[data-syntax="one-light"],
+[data-syntax-preview="one-light"] {
+  --kd-t-keyword: #a626a4;
+  --kd-t-string: #50a14f;
+  --kd-t-comment: #a0a1a7;
+  --kd-t-number: #986801;
+  --kd-t-function: #4078f2;
+  --kd-t-type: #c18401;
+  --kd-t-variable: #383a42;
+  --kd-t-constant: #986801;
+  --kd-t-operator: #0184bc;
+  --kd-t-punctuation: #696c77;
+  --kd-t-tag: #e45649;
+  --kd-t-attribute: #986801;
+}
+
+:root[data-syntax="solarized-light"],
+[data-syntax-preview="solarized-light"] {
+  --kd-t-keyword: #859900;
+  --kd-t-string: #2aa198;
+  --kd-t-comment: #93a1a1;
+  --kd-t-number: #d33682;
+  --kd-t-function: #268bd2;
+  --kd-t-type: #b58900;
+  --kd-t-variable: #657b83;
+  --kd-t-constant: #cb4b16;
+  --kd-t-operator: #859900;
+  --kd-t-punctuation: #93a1a1;
+  --kd-t-tag: #268bd2;
+  --kd-t-attribute: #b58900;
+}
+
+:root[data-syntax="gruvbox-light"],
+[data-syntax-preview="gruvbox-light"] {
+  --kd-t-keyword: #9d0006;
+  --kd-t-string: #79740e;
+  --kd-t-comment: #928374;
+  --kd-t-number: #8f3f71;
+  --kd-t-function: #79740e;
+  --kd-t-type: #b57614;
+  --kd-t-variable: #3c3836;
+  --kd-t-constant: #8f3f71;
+  --kd-t-operator: #427b58;
+  --kd-t-punctuation: #7c6f64;
+  --kd-t-tag: #076678;
+  --kd-t-attribute: #b57614;
+}
+
+:root[data-syntax="latte"],
+[data-syntax-preview="latte"] {
+  --kd-t-keyword: #8839ef;
+  --kd-t-string: #40a02b;
+  --kd-t-comment: #9ca0b0;
+  --kd-t-number: #fe640b;
+  --kd-t-function: #1e66f5;
+  --kd-t-type: #df8e1d;
+  --kd-t-variable: #4c4f69;
+  --kd-t-constant: #fe640b;
+  --kd-t-operator: #04a5e5;
+  --kd-t-punctuation: #7c7f93;
+  --kd-t-tag: #d20f39;
+  --kd-t-attribute: #df8e1d;
+}
+
+:root[data-syntax="github-dark"],
+[data-syntax-preview="github-dark"] {
+  --kd-t-keyword: #ff7b72;
+  --kd-t-string: #a5d6ff;
+  --kd-t-comment: #8b949e;
+  --kd-t-number: #79c0ff;
+  --kd-t-function: #d2a8ff;
+  --kd-t-type: #ffa657;
+  --kd-t-variable: #c9d1d9;
+  --kd-t-constant: #79c0ff;
+  --kd-t-operator: #ff7b72;
+  --kd-t-punctuation: #8b949e;
+  --kd-t-tag: #7ee787;
+  --kd-t-attribute: #79c0ff;
+}
+
+:root[data-syntax="one-dark"],
+[data-syntax-preview="one-dark"] {
+  --kd-t-keyword: #c678dd;
+  --kd-t-string: #98c379;
+  --kd-t-comment: #7f848e;
+  --kd-t-number: #d19a66;
+  --kd-t-function: #61afef;
+  --kd-t-type: #e5c07b;
+  --kd-t-variable: #abb2bf;
+  --kd-t-constant: #d19a66;
+  --kd-t-operator: #56b6c2;
+  --kd-t-punctuation: #9aa0a8;
+  --kd-t-tag: #e06c75;
+  --kd-t-attribute: #d19a66;
+}
+
+:root[data-syntax="dracula"],
+[data-syntax-preview="dracula"] {
+  --kd-t-keyword: #ff79c6;
+  --kd-t-string: #f1fa8c;
+  --kd-t-comment: #6272a4;
+  --kd-t-number: #bd93f9;
+  --kd-t-function: #50fa7b;
+  --kd-t-type: #8be9fd;
+  --kd-t-variable: #f8f8f2;
+  --kd-t-constant: #bd93f9;
+  --kd-t-operator: #ff79c6;
+  --kd-t-punctuation: #b9bcc9;
+  --kd-t-tag: #ff79c6;
+  --kd-t-attribute: #50fa7b;
+}
+
+:root[data-syntax="nord"],
+[data-syntax-preview="nord"] {
+  --kd-t-keyword: #81a1c1;
+  --kd-t-string: #a3be8c;
+  --kd-t-comment: #6d7a94;
+  --kd-t-number: #b48ead;
+  --kd-t-function: #88c0d0;
+  --kd-t-type: #8fbcbb;
+  --kd-t-variable: #d8dee9;
+  --kd-t-constant: #b48ead;
+  --kd-t-operator: #81a1c1;
+  --kd-t-punctuation: #aab3c2;
+  --kd-t-tag: #81a1c1;
+  --kd-t-attribute: #8fbcbb;
+}
+
+:root[data-syntax="monokai"],
+[data-syntax-preview="monokai"] {
+  --kd-t-keyword: #f92672;
+  --kd-t-string: #e6db74;
+  --kd-t-comment: #8b8768;
+  --kd-t-number: #ae81ff;
+  --kd-t-function: #a6e22e;
+  --kd-t-type: #66d9ef;
+  --kd-t-variable: #f8f8f2;
+  --kd-t-constant: #ae81ff;
+  --kd-t-operator: #f92672;
+  --kd-t-punctuation: #b6b5a8;
+  --kd-t-tag: #f92672;
+  --kd-t-attribute: #a6e22e;
+}
+
+:root[data-syntax="solarized-dark"],
+[data-syntax-preview="solarized-dark"] {
+  --kd-t-keyword: #859900;
+  --kd-t-string: #2aa198;
+  --kd-t-comment: #6c8085;
+  --kd-t-number: #d33682;
+  --kd-t-function: #268bd2;
+  --kd-t-type: #b58900;
+  --kd-t-variable: #93a1a1;
+  --kd-t-constant: #cb4b16;
+  --kd-t-operator: #859900;
+  --kd-t-punctuation: #7d8f92;
+  --kd-t-tag: #268bd2;
+  --kd-t-attribute: #b58900;
+}
+
+:root[data-syntax="tokyo-night"],
+[data-syntax-preview="tokyo-night"] {
+  --kd-t-keyword: #bb9af7;
+  --kd-t-string: #9ece6a;
+  --kd-t-comment: #6b74a0;
+  --kd-t-number: #ff9e64;
+  --kd-t-function: #7aa2f7;
+  --kd-t-type: #2ac3de;
+  --kd-t-variable: #c0caf5;
+  --kd-t-constant: #ff9e64;
+  --kd-t-operator: #89ddff;
+  --kd-t-punctuation: #9aa5ce;
+  --kd-t-tag: #f7768e;
+  --kd-t-attribute: #e0af68;
+}
+
+:root[data-syntax="gruvbox-dark"],
+[data-syntax-preview="gruvbox-dark"] {
+  --kd-t-keyword: #fb4934;
+  --kd-t-string: #b8bb26;
+  --kd-t-comment: #a89984;
+  --kd-t-number: #d3869b;
+  --kd-t-function: #b8bb26;
+  --kd-t-type: #fabd2f;
+  --kd-t-variable: #ebdbb2;
+  --kd-t-constant: #d3869b;
+  --kd-t-operator: #8ec07c;
+  --kd-t-punctuation: #bdae93;
+  --kd-t-tag: #83a598;
+  --kd-t-attribute: #fabd2f;
+}
+
+/* 既定（木漏れ日 / 夜の林）は :root と [data-theme] が持っているので、本体には
+   block が要らない。見本だけは、いま選んでいる明暗に引きずられないよう
+   ここで色を固定する。 */
+[data-syntax-preview="kodama-light"] {
+  --kd-t-keyword: var(--kd-c-momiji-800);
+  --kd-t-string: var(--kd-c-leaf-900);
+  --kd-t-comment: #78715f;
+  --kd-t-number: var(--kd-c-sky-700);
+  --kd-t-function: var(--kd-c-violet-700);
+  --kd-t-type: var(--kd-c-sun-800);
+}
+
+[data-syntax-preview="kodama-dark"] {
+  --kd-t-keyword: var(--kd-c-momiji-300);
+  --kd-t-string: var(--kd-c-leaf-300);
+  --kd-t-comment: #948b79;
+  --kd-t-number: var(--kd-c-sky-300);
+  --kd-t-function: var(--kd-c-violet-300);
+  --kd-t-type: var(--kd-c-sun-400);
+}

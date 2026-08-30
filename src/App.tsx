@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { DiffCanvas } from "./components/diff/DiffCanvas";
 import { EmptyProjects } from "./components/empty/EmptyProjects";
+import { AppearanceModal } from "./components/appearance/AppearanceModal";
 import { SettingsModal } from "./components/projects/SettingsModal";
 import { TopBar } from "./components/topbar/TopBar";
 import { TreePane } from "./components/tree/TreePane";
@@ -29,6 +30,7 @@ import {
   selectedWorktreeAtom,
   focusFilterAtom,
   settingsOpenAtom,
+  appearanceOpenAtom,
   shortcutsOpenAtom,
   sidebarOpenAtom,
   sidebarWidthAtom,
@@ -65,6 +67,7 @@ export default function App() {
   const [sidebarWidth, setSidebarWidth] = useAtom(sidebarWidthAtom);
   const [settingsOpen, setSettingsOpen] = useAtom(settingsOpenAtom);
   const [shortcutsOpen, setShortcutsOpen] = useAtom(shortcutsOpenAtom);
+  const [appearanceOpen, setAppearanceOpen] = useAtom(appearanceOpenAtom);
   const setFocusFilter = useSetAtom(focusFilterAtom);
   const worktree = useAtomValue(selectedWorktreeAtom);
   const setJump = useSetAtom(jumpRequestAtom);
@@ -207,6 +210,9 @@ export default function App() {
       ) : null}
       {shortcutsOpen ? (
         <ShortcutsModal onClose={() => setShortcutsOpen(false)} />
+      ) : null}
+      {appearanceOpen ? (
+        <AppearanceModal onClose={() => setAppearanceOpen(false)} />
       ) : null}
       <UpdateBanner />
       <Toasts />

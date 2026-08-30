@@ -2495,3 +2495,114 @@ button.kd-row__expand:hover {
   font-size: 12.5px;
 }
 
+
+/* ==========================================================================
+   表示の設定
+   ========================================================================== */
+
+.kd-appear {
+  display: grid;
+  gap: 22px;
+}
+
+.kd-appear__title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--kd-muted);
+  text-transform: uppercase;
+}
+
+.kd-appear__row {
+  display: flex;
+  gap: 8px;
+}
+
+.kd-appear__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.kd-appear__mode,
+.kd-appear__theme,
+.kd-appear__font {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--kd-border);
+  border-radius: var(--kd-radius-md);
+  background: transparent;
+  color: var(--kd-fg);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color var(--kd-dur-instant) var(--kd-ease-out),
+    background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-appear__mode:hover,
+.kd-appear__theme:hover,
+.kd-appear__font:hover {
+  border-color: var(--kd-border-strong);
+  background: var(--kd-hover);
+}
+
+.kd-appear__mode[data-selected],
+.kd-appear__theme[data-selected],
+.kd-appear__font[data-selected] {
+  border-color: var(--kd-accent);
+  background: var(--kd-select-bg);
+}
+
+.kd-appear__font {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.kd-appear__fontname {
+  font-size: 12px;
+}
+
+/* 書体そのものを見せる。名前だけでは選べない。 */
+.kd-appear__sample {
+  font-size: 12px;
+  color: var(--kd-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kd-appear__note {
+  font-size: 10.5px;
+  color: var(--kd-muted);
+}
+
+.kd-appear__name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 配色の見本。実際に使うトークンの色をそのまま並べる。 */
+.kd-appear__swatches {
+  display: flex;
+  flex: none;
+  gap: 3px;
+}
+
+.kd-appear__dot {
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+.kd-appear__dot[data-tok="keyword"] { background: var(--kd-t-keyword); }
+.kd-appear__dot[data-tok="string"] { background: var(--kd-t-string); }
+.kd-appear__dot[data-tok="function"] { background: var(--kd-t-function); }
+.kd-appear__dot[data-tok="type"] { background: var(--kd-t-type); }
+.kd-appear__dot[data-tok="comment"] { background: var(--kd-t-comment); }
