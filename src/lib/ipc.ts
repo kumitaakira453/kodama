@@ -99,6 +99,10 @@ export const api = {
   addThread: (input: ThreadInput) => invoke<Thread>("add_thread", { input }),
   replyThread: (id: string, author: string, body: string) =>
     invoke<Thread>("reply_thread", { id, author, body }),
+  editComment: (id: string, commentId: string, body: string) =>
+    invoke<Thread>("edit_comment", { id, commentId, body }),
+  deleteComment: (id: string, commentId: string) =>
+    invoke<Thread | null>("delete_comment", { id, commentId }),
   resolveThread: (id: string, by: string) =>
     invoke<Thread>("resolve_thread", { id, by }),
   reopenThread: (id: string) => invoke<Thread>("reopen_thread", { id }),

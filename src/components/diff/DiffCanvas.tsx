@@ -58,6 +58,8 @@ interface DiffCanvasProps {
   onToggleViewed: (path: string) => void;
   onAddThread: (input: ThreadInput) => void;
   onReply: (id: string, body: string) => void;
+  onEditComment: (id: string, commentId: string, body: string) => void;
+  onRemoveComment: (id: string, commentId: string) => void;
   onResolve: (id: string) => void;
   onDropThread: (id: string) => void;
   onOpenApp: (appId: string, path: string, line: number | null) => void;
@@ -132,6 +134,8 @@ export function DiffCanvas({
   onToggleViewed,
   onAddThread,
   onReply,
+  onEditComment,
+  onRemoveComment,
   onResolve,
   onDropThread,
   onOpenApp,
@@ -503,6 +507,8 @@ export function DiffCanvas({
                 onSubmit={submitThread}
                 onCancel={clearSelection}
                 onReply={onReply}
+                onEditComment={onEditComment}
+                onRemoveComment={onRemoveComment}
                 onResolve={onResolve}
                 onDrop={onDropThread}
               />
@@ -528,6 +534,8 @@ interface RowProps {
   onSubmit: (body: string) => void;
   onCancel: () => void;
   onReply: (id: string, body: string) => void;
+  onEditComment: (id: string, commentId: string, body: string) => void;
+  onRemoveComment: (id: string, commentId: string) => void;
   onResolve: (id: string) => void;
   onDrop: (id: string) => void;
 }
@@ -550,6 +558,8 @@ const Row = memo(function Row({
   onSubmit,
   onCancel,
   onReply,
+  onEditComment,
+  onRemoveComment,
   onResolve,
   onDrop,
 }: RowProps) {
@@ -586,6 +596,8 @@ const Row = memo(function Row({
           <ThreadCard
             view={row.view}
             onReply={onReply}
+            onEdit={onEditComment}
+            onRemove={onRemoveComment}
             onResolve={onResolve}
             onDrop={onDrop}
           />

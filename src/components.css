@@ -2726,16 +2726,35 @@ button.kd-row__expand:hover {
 .kd-appear__dot[data-tok="comment"] { background: var(--kd-t-comment); }
 
 /* ==========================================================================
-   会話（指摘のカード・一覧）
+   会話（指摘のカード）
+
+   送信済みの発言は枠を持たない地の文、書きかけの入力欄だけが枠を持つ。
+   同じ形で並べると、送ったのかこれから送るのかが形から読めない。
+   左端は発言も入力欄も揃える。段が違うと同じ話の続きに見えない。
    ========================================================================== */
+
+.kd-thread__list {
+  gap: 12px;
+}
+
+.kd-comment {
+  display: block;
+}
+
+.kd-comment__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
 
 /* 発言者の顔。名前を読む前に、人か AI かが色と形で分かる。 */
 .kd-comment__avatar {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 19px;
+  height: 19px;
   border-radius: 50%;
   border: 1px solid transparent;
 }
@@ -2755,7 +2774,7 @@ button.kd-row__expand:hover {
 .kd-comment[data-who="ai"] .kd-comment__avatar,
 .kd-comment__avatar[data-who="ai"] {
   /* 人は丸、AI は角。色を見分けにくい場面でも形で分かる。 */
-  border-radius: 7px;
+  border-radius: 6px;
   border-color: color-mix(in srgb, var(--kd-accent-2) 50%, transparent);
   background: color-mix(in srgb, var(--kd-accent-2) 16%, transparent);
   color: var(--kd-accent-2);
@@ -2768,46 +2787,6 @@ button.kd-row__expand:hover {
   color: var(--kd-muted);
 }
 
-.kd-comment {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.kd-comment__main {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.kd-comment__bubble {
-  padding: 7px 10px;
-  border: 1px solid var(--kd-border);
-  border-radius: var(--kd-radius-md);
-  background: var(--kd-bg);
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 12.5px;
-  line-height: 1.75;
-}
-
-/* 発言者ごとに縁の色を変える。カードの中に人と AI が交互に並ぶので、
-   顔だけだと、どこまでが誰の話か目で追えない。 */
-.kd-comment[data-who="you"] .kd-comment__bubble {
-  border-color: color-mix(in srgb, var(--kd-accent) 28%, var(--kd-border));
-}
-
-.kd-comment[data-who="ai"] .kd-comment__bubble {
-  border-color: color-mix(in srgb, var(--kd-accent-2) 30%, var(--kd-border));
-}
-
-.kd-comment__meta {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 4px;
-  padding-left: 2px;
-}
-
 .kd-comment__author {
   font-size: 11.5px;
   font-weight: 600;
@@ -2816,6 +2795,51 @@ button.kd-row__expand:hover {
 .kd-comment__time {
   color: var(--kd-muted);
   font-size: 10.5px;
+}
+
+/* 直す・消すは、指しているあいだだけ出す。並んでいると本文より先に目に入る。 */
+.kd-comment__tools {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-comment:hover .kd-comment__tools,
+.kd-comment__tools:focus-within {
+  opacity: 1;
+}
+
+.kd-comment__tool {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: var(--kd-muted);
+  cursor: pointer;
+}
+
+.kd-comment__tool:hover {
+  background: var(--kd-hover);
+  color: var(--kd-fg);
+}
+
+/* 本文。枠は持たせない。送信済みであることは形で示す。 */
+.kd-comment__text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12.5px;
+  line-height: 1.75;
+}
+
+.kd-comment__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 /* 本文に混じる識別子。地の文と地続きだと読み違える。 */
@@ -2850,21 +2874,19 @@ button.kd-row__expand:hover {
   gap: 4px;
 }
 
+/* 入力欄。会話との境を引いて、ここから先は未送信だと示す。 */
 .kd-thread__reply {
-  align-items: flex-start;
-}
-
-.kd-thread__replybody {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 0;
-  flex: 1 1 auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--kd-border);
 }
 
 .kd-thread__replyfoot {
   display: flex;
   justify-content: flex-end;
+  gap: 6px;
 }
 
 /* ==========================================================================

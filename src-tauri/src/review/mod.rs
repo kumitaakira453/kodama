@@ -133,6 +133,44 @@ pub fn reply(id: &str, author: &str, body: &str) -> KdResult<Thread> {
     })
 }
 
+/// 自分が書いた発言を書き直す。
+///
+/// 誰が書いたかは変えない。書き換えられるのは中身だけで、発言そのものを
+/// 別人のものにはできない。
+pub fn edit_comment(id: &str, comment_id: &str, body: &str) -> KdResult<Thread> {
+    store::update(|ledger| {
+        let thread = find_mut(ledger, id)?;
+        let comment = thread
+            .comments
+            .iter_mut()
+            .find(|c| c.id == comment_id)
+            .ok_or_else(|| KdError::new("その発言は見つかりません。".to_string()))?;
+        comment.body = body.to_string();
+        Ok(thread.clone())
+    })
+}
+
+/// 発言を消す。最初の発言を消したときは、指摘そのものを取り下げる。
+///
+/// 最初の発言は指摘の中身そのもので、これを失うと返信だけが宙に浮く。
+/// 何に対する話だったのか、あとから誰にも分からなくなる。
+pub fn delete_comment(id: &str, comment_id: &str) -> KdResult<Option<Thread>> {
+    store::update(|ledger| {
+        let thread = find_mut(ledger, id)?;
+        let first = thread
+            .comments
+            .first()
+            .map(|c| c.id == comment_id)
+            .unwrap_or(false);
+        if first {
+            ledger.threads.retain(|t| t.id != id);
+            return Ok(None);
+        }
+        thread.comments.retain(|c| c.id != comment_id);
+        Ok(Some(thread.clone()))
+    })
+}
+
 pub fn set_status(id: &str, status: Status) -> KdResult<Thread> {
     store::update(|ledger| {
         let thread = find_mut(ledger, id)?;

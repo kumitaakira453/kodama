@@ -57,8 +57,16 @@ export default function App() {
   } = useProjects();
   const { reload: reloadDiff } = useDiff();
   const { viewed, toggle: toggleViewed, progress } = useViewed();
-  const { threads, refresh: refreshThreads, add, reply, resolve, drop } =
-    useThreads();
+  const {
+    threads,
+    refresh: refreshThreads,
+    add,
+    reply,
+    edit,
+    remove,
+    resolve,
+    drop,
+  } = useThreads();
   const { apps, open: openApp } = useApps();
 
   // 台帳は CLI（AI 側）から書き換わる。フォーカスが戻るのを待たずに反映する。
@@ -187,6 +195,8 @@ export default function App() {
             onToggleViewed={toggleViewed}
             onAddThread={(input) => void add(input)}
             onReply={(id, body) => void reply(id, body)}
+            onEditComment={(id, commentId, body) => void edit(id, commentId, body)}
+            onRemoveComment={(id, commentId) => void remove(id, commentId)}
             onResolve={(id) => void resolve(id)}
             onDropThread={(id) => void drop(id)}
             onOpenApp={(appId, path, line) =>

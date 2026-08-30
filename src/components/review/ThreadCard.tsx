@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { faceOf } from "../../lib/author";
 import { relativeTime } from "../../lib/time";
-import type { AnchorState, ThreadView } from "../../lib/types";
+import type { AnchorState, Comment, ThreadView } from "../../lib/types";
 import { Icon } from "../ui/Icon";
 import { CommentBody } from "./CommentBody";
 
@@ -27,13 +27,24 @@ function describeAnchor(anchor: AnchorState): string | null {
 interface ThreadCardProps {
   view: ThreadView;
   onReply: (id: string, body: string) => void;
+  onEdit: (id: string, commentId: string, body: string) => void;
+  onRemove: (id: string, commentId: string) => void;
   onResolve: (id: string) => void;
   onDrop: (id: string) => void;
 }
 
+/**
+ * 1 つの指摘。
+ *
+ * 送信済みの発言は枠を持たない地の文、書きかけの入力欄だけが枠を持つ。
+ * 同じ形で並べると、送ったのかこれから送るのかが形から読めない。
+ * 左端は発言も入力欄も揃える。段が違うと、同じ話の続きに見えない。
+ */
 export function ThreadCard({
   view,
   onReply,
+  onEdit,
+  onRemove,
   onResolve,
   onDrop,
 }: ThreadCardProps) {
@@ -66,7 +77,10 @@ export function ThreadCard({
         </span>
         <span className="kd-thread__id">#{view.thread.id}</span>
         {absorbed ? (
-          <span className="kd-thread__origin" title="未コミットの変更に書かれ、このコミットに取り込まれた指摘">
+          <span
+            className="kd-thread__origin"
+            title="未コミットの変更に書かれ、このコミットに取り込まれた指摘"
+          >
             <Icon name="move_down" size={12} />
             取り込まれた指摘
           </span>
@@ -99,62 +113,136 @@ export function ThreadCard({
       </div>
 
       <ul className="kd-thread__list">
-        {view.thread.comments.map((c) => {
-          const face = faceOf(c.author);
-          return (
-            <li key={c.id} className="kd-comment" data-who={face.kind}>
-              <span className="kd-comment__avatar" aria-hidden>
-                <Icon name={face.icon} size={14} />
-              </span>
-              <div className="kd-comment__main">
-                {/* 名前と時刻は吹き出しの外に置く。中に入れると、書いた内容と
-                    同じ重みで読まされる。 */}
-                <div className="kd-comment__meta">
-                  <span className="kd-comment__author">{face.label}</span>
-                  <span className="kd-comment__time">
-                    {relativeTime(c.createdAt)}
-                  </span>
-                </div>
-                <div className="kd-comment__bubble">
-                  <CommentBody text={c.body} />
-                </div>
-              </div>
-            </li>
-          );
-        })}
+        {view.thread.comments.map((c) => (
+          <CommentRow
+            key={c.id}
+            comment={c}
+            onEdit={(text) => onEdit(view.thread.id, c.id, text)}
+            onRemove={() => onRemove(view.thread.id, c.id)}
+          />
+        ))}
       </ul>
 
       <div className="kd-thread__reply">
-        <span className="kd-comment__avatar" data-who="you" aria-hidden>
-          <Icon name="person" size={14} />
-        </span>
-        <div className="kd-thread__replybody">
-          <textarea
-            className="kd-textarea"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && e.metaKey) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            placeholder="返信する（⌘Enter で送信）"
-            rows={2}
-          />
-          {/* 送るボタンは書き終わりの側に置く。入力欄の横だと、書いている
-              途中の視線の先から外れる。 */}
-          <div className="kd-thread__replyfoot">
-            <button
-              className="kd-btn kd-btn--primary kd-btn--sm"
-              onClick={submit}
-              disabled={!body.trim()}
-            >
-              返信
-            </button>
-          </div>
+        <textarea
+          className="kd-textarea"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && e.metaKey) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+          placeholder="返信する（⌘Enter で送信）"
+          rows={2}
+        />
+        <div className="kd-thread__replyfoot">
+          <button
+            className="kd-btn kd-btn--primary kd-btn--sm"
+            onClick={submit}
+            disabled={!body.trim()}
+          >
+            返信
+          </button>
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * 発言 1 つ。自分が書いたものだけ直せる。
+ *
+ * 他人（AI）の発言を書き換えられると、会話の記録が記録でなくなる。
+ */
+function CommentRow({
+  comment,
+  onEdit,
+  onRemove,
+}: {
+  comment: Comment;
+  onEdit: (body: string) => void;
+  onRemove: () => void;
+}) {
+  const face = faceOf(comment.author);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(comment.body);
+
+  const save = () => {
+    const text = draft.trim();
+    if (text && text !== comment.body) onEdit(text);
+    setEditing(false);
+  };
+
+  return (
+    <li className="kd-comment" data-who={face.kind}>
+      <div className="kd-comment__meta">
+        <span className="kd-comment__avatar" aria-hidden>
+          <Icon name={face.icon} size={13} />
+        </span>
+        <span className="kd-comment__author">{face.label}</span>
+        <span className="kd-comment__time">{relativeTime(comment.createdAt)}</span>
+        {face.kind === "you" && !editing ? (
+          <span className="kd-comment__tools">
+            <button
+              className="kd-comment__tool"
+              onClick={() => {
+                setDraft(comment.body);
+                setEditing(true);
+              }}
+              title="書き直す"
+            >
+              <Icon name="edit" size={13} />
+            </button>
+            <button
+              className="kd-comment__tool"
+              onClick={onRemove}
+              title="消す"
+            >
+              <Icon name="delete" size={13} />
+            </button>
+          </span>
+        ) : null}
+      </div>
+
+      {editing ? (
+        <div className="kd-comment__edit">
+          <textarea
+            className="kd-textarea"
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.metaKey) {
+                e.preventDefault();
+                save();
+              }
+              if (e.key === "Escape") setEditing(false);
+            }}
+            rows={3}
+          />
+          <div className="kd-thread__replyfoot">
+            <button
+              className="kd-btn kd-btn--sm"
+              onClick={() => setEditing(false)}
+            >
+              やめる
+            </button>
+            <button
+              className="kd-btn kd-btn--primary kd-btn--sm"
+              onClick={save}
+              disabled={!draft.trim()}
+            >
+              保存
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="kd-comment__text">
+          <CommentBody text={comment.body} />
+        </div>
+      )}
+    </li>
   );
 }

@@ -34,6 +34,16 @@ pub async fn reply_thread(id: String, author: String, body: String) -> KdResult<
 }
 
 #[tauri::command]
+pub async fn edit_comment(id: String, comment_id: String, body: String) -> KdResult<Thread> {
+    run_query(move || review::edit_comment(&id, &comment_id, &body)).await
+}
+
+#[tauri::command]
+pub async fn delete_comment(id: String, comment_id: String) -> KdResult<Option<Thread>> {
+    run_query(move || review::delete_comment(&id, &comment_id)).await
+}
+
+#[tauri::command]
 pub async fn resolve_thread(id: String, by: String) -> KdResult<Thread> {
     run_query(move || {
         review::set_status(

@@ -91,6 +91,8 @@ pub fn run() {
             commands::review::list_threads,
             commands::review::add_thread,
             commands::review::reply_thread,
+            commands::review::edit_comment,
+            commands::review::delete_comment,
             commands::review::resolve_thread,
             commands::review::reopen_thread,
             commands::review::drop_thread,
