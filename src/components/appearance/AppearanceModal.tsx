@@ -58,26 +58,14 @@ export function AppearanceModal({ onClose }: { onClose: () => void }) {
           </div>
         </section>
 
+        {/* いま選んでいる明暗の配色だけを出す。両方を並べると、片方は今の
+            画面に効かない一覧になり、押しても何も変わらないように見える。 */}
         <SyntaxGroup
-          title="配色（ライト）"
-          themes={LIGHT_SYNTAX}
-          value={light}
-          defaultPreview="kodama-light"
-          onPick={(id) => {
-            setLight(id);
-            setTheme("light");
-          }}
-        />
-
-        <SyntaxGroup
-          title="配色（ダーク）"
-          themes={DARK_SYNTAX}
-          value={dark}
-          defaultPreview="kodama-dark"
-          onPick={(id) => {
-            setDark(id);
-            setTheme("dark");
-          }}
+          title={`配色（${THEME_LABEL[theme]}）`}
+          themes={theme === "dark" ? DARK_SYNTAX : LIGHT_SYNTAX}
+          value={theme === "dark" ? dark : light}
+          defaultPreview={theme === "dark" ? "kodama-dark" : "kodama-light"}
+          onPick={theme === "dark" ? setDark : setLight}
         />
 
         <section className="kd-appear__group">
