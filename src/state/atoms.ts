@@ -4,7 +4,7 @@ import { atomWithStorage } from "jotai/utils";
 import { DEFAULT_FONT, DEFAULT_SYNTAX } from "../lib/appearance";
 import { collapsedFiles } from "../lib/diff/collapse";
 import { applyFilter, type FileFilter } from "../lib/diff/filter";
-import type { CommitSelection } from "../lib/revisions";
+import { isInSelection, type CommitSelection } from "../lib/revisions";
 import type {
   DiffFile,
   DiffResponse,
@@ -216,7 +216,68 @@ export const focusFilterAtom = atom<number>(0);
 
 // ---- 指摘 ----
 
-export const threadsAtom = atom<ThreadView[]>([]);
+/**
+ * この worktree に付いた指摘の全件。
+ *
+ * 比較ごとに取り直さない。未コミットに書いた指摘がコミットへ取り込まれると、
+ * 元のキーは未コミットのままなので、取り込み先の比較で絞って取ると出てこない。
+ * 全件を手元に置き、どこに出すかは下の派生で決める。
+ */
+export const allThreadsAtom = atom<ThreadView[]>([]);
+
+/**
+ * いま見ている比較に属する指摘。
+ *
+ * 同じキーのものに加えて、**取り込まれた先が今の範囲に入っているもの**も出す。
+ * 未コミットに書いた指摘は、コミットした瞬間に元の比較から中身が消える。
+ * 出所は元のまま残し、行き先からも読めるようにする。
+ */
+export const threadsAtom = atom<ThreadView[]>((get) => {
+  const key = get(diffAtom)?.resolved.revisionKey ?? null;
+  const selection = get(commitSelectionAtom);
+  const commits = get(revisionsAtom)?.commits ?? [];
+  return get(allThreadsAtom).filter(
+    (v) =>
+      v.thread.revisionKey === key ||
+      (v.anchor.kind === "committed" &&
+        isInSelection(v.anchor.sha, selection, commits)),
+  );
+});
+
+/**
+ * 比較対象ごとの未解決の件数。
+ *
+ * どこに指摘が残っているかは、その比較を選ぶ前に分かっている必要がある。
+ * 選んで初めて見えるなら、探すのに総当たりすることになる。
+ */
+export interface ThreadMarks {
+  /** 疑似エントリのキーから引く件数。 */
+  byKey: Record<string, number>;
+  /** コミットの sha から引く件数。取り込まれたものもここに数える。 */
+  byCommit: Record<string, number>;
+  /** コミットを含む比較に付いたものの総数。「すべてのコミット」に出す。 */
+  ranged: number;
+}
+
+export const threadMarksAtom = atom<ThreadMarks>((get) => {
+  const marks: ThreadMarks = { byKey: {}, byCommit: {}, ranged: 0 };
+  for (const view of get(allThreadsAtom)) {
+    if (view.thread.status.kind !== "open") continue;
+    const key = view.thread.revisionKey;
+    marks.byKey[key] = (marks.byKey[key] ?? 0) + 1;
+    if (key.startsWith("range:")) {
+      marks.ranged += 1;
+      // `range:<base>..<target>` の右側が、その比較の先端のコミット。
+      const target = key.slice(key.indexOf("..") + 2);
+      if (target) marks.byCommit[target] = (marks.byCommit[target] ?? 0) + 1;
+    }
+    if (view.anchor.kind === "committed") {
+      const sha = view.anchor.sha;
+      marks.byCommit[sha] = (marks.byCommit[sha] ?? 0) + 1;
+    }
+  }
+  return marks;
+});
 
 /** ファイルのパス → 閲覧済みの状態。3 値で持つ。 */
 export const viewedAtom = atom<Record<string, ViewedStatus>>({});

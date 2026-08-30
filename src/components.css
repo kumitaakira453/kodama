@@ -2754,6 +2754,8 @@ button.kd-row__expand:hover {
 
 .kd-comment[data-who="ai"] .kd-comment__avatar,
 .kd-comment__avatar[data-who="ai"] {
+  /* 人は丸、AI は角。色を見分けにくい場面でも形で分かる。 */
+  border-radius: 7px;
   border-color: color-mix(in srgb, var(--kd-accent-2) 50%, transparent);
   background: color-mix(in srgb, var(--kd-accent-2) 16%, transparent);
   color: var(--kd-accent-2);
@@ -2775,19 +2777,26 @@ button.kd-row__expand:hover {
 .kd-comment__main {
   min-width: 0;
   flex: 1 1 auto;
+}
+
+.kd-comment__bubble {
   padding: 7px 10px;
   border: 1px solid var(--kd-border);
   border-radius: var(--kd-radius-md);
   background: var(--kd-bg);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12.5px;
+  line-height: 1.75;
 }
 
 /* 発言者ごとに縁の色を変える。カードの中に人と AI が交互に並ぶので、
    顔だけだと、どこまでが誰の話か目で追えない。 */
-.kd-comment[data-who="you"] .kd-comment__main {
+.kd-comment[data-who="you"] .kd-comment__bubble {
   border-color: color-mix(in srgb, var(--kd-accent) 28%, var(--kd-border));
 }
 
-.kd-comment[data-who="ai"] .kd-comment__main {
+.kd-comment[data-who="ai"] .kd-comment__bubble {
   border-color: color-mix(in srgb, var(--kd-accent-2) 30%, var(--kd-border));
 }
 
@@ -2795,7 +2804,8 @@ button.kd-row__expand:hover {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+  padding-left: 2px;
 }
 
 .kd-comment__author {
@@ -2806,13 +2816,6 @@ button.kd-row__expand:hover {
 .kd-comment__time {
   color: var(--kd-muted);
   font-size: 10.5px;
-}
-
-.kd-comment__body {
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 12.5px;
-  line-height: 1.75;
 }
 
 /* 本文に混じる識別子。地の文と地続きだと読み違える。 */
@@ -2849,6 +2852,19 @@ button.kd-row__expand:hover {
 
 .kd-thread__reply {
   align-items: flex-start;
+}
+
+.kd-thread__replybody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.kd-thread__replyfoot {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* ==========================================================================
@@ -2903,19 +2919,12 @@ button.kd-row__expand:hover {
   flex: 1 1 auto;
 }
 
-.kd-drawer__toggle {
-  padding: 3px 8px;
-  border: 1px solid var(--kd-border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--kd-muted);
+/* 文字を並べる切替。アイコン用の正方形のままだと文字が入らない。 */
+.kd-seg--sm .kd-seg__item {
+  width: auto;
+  height: 24px;
+  padding: 0 9px;
   font-size: 10.5px;
-  cursor: pointer;
-}
-
-.kd-drawer__toggle[data-on] {
-  border-color: var(--kd-accent);
-  color: var(--kd-accent);
 }
 
 .kd-drawer__body {
@@ -3103,4 +3112,35 @@ button.kd-row__expand:hover {
   color: var(--kd-accent);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
+}
+
+/* 比較対象の行に出す指摘の印。ツリーの印と同じ形にして、同じものだと分かるようにする。 */
+.kd-revrow__threads {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kd-accent) 16%, transparent);
+  color: var(--kd-accent);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 取り込まれた指摘。ここに書いたものではない、と分かるようにする。 */
+.kd-thread[data-absorbed] {
+  border-style: dashed;
+}
+
+.kd-thread__origin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kd-accent-2) 16%, transparent);
+  color: var(--kd-accent-2);
+  font-size: 10px;
 }

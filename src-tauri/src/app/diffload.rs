@@ -141,7 +141,15 @@ pub fn load(worktree: &str, spec: &DiffSpec, context: u32) -> KdResult<DiffRespo
     let mut files: Vec<DiffFile> = parse_patch(&patch).into_iter().map(to_dto).collect();
 
     if spec.includes_untracked() {
+        // 索引から外しただけでファイルが残っていると、同じパスが削除としても
+        // 未追跡としても挙がる。同じパスが 2 行並ぶと、閲覧済みも指摘も
+        // どちらの行のものか決まらない。追跡側の見え方を残す。
+        let tracked: std::collections::HashSet<String> =
+            files.iter().map(|f| f.path.clone()).collect();
         for path in git.untracked_paths(worktree) {
+            if tracked.contains(&path) {
+                continue;
+            }
             // 未追跡ファイルは通常の diff に現れない。空との比較で全追加として出す。
             match git.untracked_patch(worktree, &path, context) {
                 Ok(text) => {

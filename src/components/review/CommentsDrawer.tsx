@@ -60,14 +60,24 @@ export function CommentsDrawer({
         <h2 className="kd-drawer__title">指摘</h2>
         <span className="kd-drawer__count">{open.length}</span>
         <span className="kd-drawer__spacer" />
-        <button
-          className="kd-drawer__toggle"
-          data-on={showResolved || undefined}
-          onClick={() => setShowResolved(!showResolved)}
-          title="解決済みも含めて出す"
-        >
-          解決済みも
-        </button>
+        {/* どちらを見ているかを常に出す。片方だけの押しボタンだと、
+            いま何が省かれているのか分からない。 */}
+        <div className="kd-seg kd-seg--sm" role="group" aria-label="出す範囲">
+          <button
+            className="kd-seg__item"
+            aria-pressed={!showResolved}
+            onClick={() => setShowResolved(false)}
+          >
+            未解決
+          </button>
+          <button
+            className="kd-seg__item"
+            aria-pressed={showResolved}
+            onClick={() => setShowResolved(true)}
+          >
+            すべて
+          </button>
+        </div>
         <button className="kd-iconbtn" onClick={onClose} aria-label="閉じる">
           <Icon name="close" size={18} />
         </button>

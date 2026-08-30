@@ -1,9 +1,10 @@
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
 import { api } from "../lib/ipc";
 import type { ThreadInput } from "../lib/types";
 import {
+  allThreadsAtom,
   diffAtom,
   selectedWorktreeAtom,
   threadsAtom,
@@ -18,7 +19,8 @@ import { useToast } from "./useToast";
  * 「何も起きていない」と受け取ってしまう。
  */
 export function useThreads() {
-  const [threads, setThreads] = useAtom(threadsAtom);
+  const threads = useAtomValue(threadsAtom);
+  const setAll = useSetAtom(allThreadsAtom);
   const worktree = useAtomValue(selectedWorktreeAtom);
   const diff = useAtomValue(diffAtom);
   const { showError } = useToast();
@@ -29,18 +31,21 @@ export function useThreads() {
   const refresh = useCallback(() => {
     const gen = ++generation.current;
     if (!worktree) {
-      setThreads([]);
+      setAll([]);
       return;
     }
+    // 比較で絞らずに取る。取り込まれた指摘をどこに出すかは、受け取った側で決める。
+    // revisionKey は取得の条件ではないが、比較が変わると追跡の結果も変わるので
+    // 読み直しの合図として見る。
     api
-      .listThreads(worktree, revisionKey)
+      .listThreads(worktree, null)
       .then((list) => {
-        if (gen === generation.current) setThreads(list);
+        if (gen === generation.current) setAll(list);
       })
       .catch((e: unknown) => {
         if (gen === generation.current) showError(e);
       });
-  }, [worktree, revisionKey, setThreads, showError]);
+  }, [worktree, revisionKey, setAll, showError]);
 
   useEffect(refresh, [refresh]);
 

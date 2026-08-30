@@ -16,6 +16,7 @@ import type { CommitInfo, WorktreeStatus } from "../../lib/types";
 import {
   commitSelectionAtom,
   revisionsAtom,
+  threadMarksAtom,
   selectedWorktreeAtom,
   statusesAtom,
 } from "../../state/atoms";
@@ -73,6 +74,13 @@ export function RevisionMenu() {
  * 読み込みでダイアログが閉じてしまう。ここでは下書きだけを動かし、
  * 適用したときに一度だけ反映する。
  */
+/** 疑似エントリと保存キーの綴りの対応。未ステージだけ working になる。 */
+const WORKING_KEYS: Record<string, string> = {
+  uncommitted: "uncommitted",
+  staged: "staged",
+  unstaged: "working",
+};
+
 function RevisionDialog({ onClose }: { onClose: () => void }) {
   const revisions = useAtomValue(revisionsAtom);
   const worktree = useAtomValue(selectedWorktreeAtom);
@@ -80,6 +88,7 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
   const [selection, setSelection] = useAtom(commitSelectionAtom);
   const [draft, setDraft] = useState<CommitSelection | null>(selection);
   const [tab, setTab] = useState<Tab>(() => initialTab(selection));
+  const marks = useAtomValue(threadMarksAtom);
 
   const commits = revisions?.commits ?? [];
   const defaultBase = revisions?.defaultBase ?? null;
@@ -129,6 +138,7 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
     >
       <div className="kd-revmenu">
         <PickRow
+          threads={marks.byKey[`everything:${worktree}`] ?? 0}
           label={PSEUDO_LABELS.everything}
           detail={
             defaultBase
@@ -163,6 +173,7 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
         {tab === "commits" ? (
           <>
             <PickRow
+              threads={marks.ranged}
               label={PSEUDO_LABELS.branch}
               detail={
                 defaultBase
@@ -178,6 +189,7 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
               {commits.map((c) => (
                 <CommitRow
                   key={c.sha}
+                  threads={marks.byCommit[c.sha] ?? 0}
                   commit={c}
                   selected={
                     draft ? isInSelection(c.sha, draft, commits) : false
@@ -201,6 +213,7 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
           WORKING.map(({ id, icon, child }) => (
             <PickRow
               key={id}
+              threads={marks.byKey[`${WORKING_KEYS[id]}:${worktree}`] ?? 0}
               label={PSEUDO_LABELS[id]}
               detail={workingDetail(id, status)}
               icon={icon}
@@ -215,8 +228,25 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
+/**
+ * その比較に残っている指摘の印。
+ *
+ * 選ぶ前に分かる必要がある。選んで初めて見えるなら、どこに残っているかを
+ * 総当たりで探すことになる。
+ */
+function ThreadMark({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="kd-revrow__threads" title={`未解決の指摘 ${count} 件`}>
+      <Icon name="chat_bubble" size={11} />
+      {count}
+    </span>
+  );
+}
+
 /** チェックひとつの選択肢。親に含まれているときもチェックが付く。 */
 function PickRow({
+  threads,
   label,
   detail,
   icon,
@@ -225,6 +255,8 @@ function PickRow({
   disabled = false,
   child = false,
 }: {
+  /** 未解決の指摘の数。0 なら何も出さない。 */
+  threads: number;
   label: string;
   detail: string;
   icon?: string;
@@ -250,6 +282,7 @@ function PickRow({
       </label>
       <button className="kd-revrow__body" disabled={disabled} onClick={onToggle}>
         <span className="kd-revrow__line">
+          <ThreadMark count={threads} />
           {icon ? (
             <Icon name={icon} size={15} className="kd-revrow__icon" />
           ) : null}
@@ -268,10 +301,12 @@ function PickRow({
  * していると、押しやすいほうが毎回選択を 1 件に潰すので複数選べなくなる。
  */
 function CommitRow({
+  threads,
   commit,
   selected,
   onToggle,
 }: {
+  threads: number;
   commit: CommitInfo;
   selected: boolean;
   onToggle: () => void;
@@ -292,6 +327,7 @@ function CommitRow({
         title={`${commit.sha}\n${commit.author}\n${commit.subject}`}
       >
         <span className="kd-revrow__line">
+          <ThreadMark count={threads} />
           <span className="kd-revrow__text">{commit.subject}</span>
           <span className="kd-revrow__sha">{commit.shortSha}</span>
         </span>

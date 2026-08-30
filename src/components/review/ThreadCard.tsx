@@ -41,6 +41,8 @@ export function ThreadCard({
   const notice = describeAnchor(view.anchor);
   const lost =
     view.anchor.kind === "removed" || view.anchor.kind === "noFile";
+  // 未コミットに書いたものが、この比較に取り込まれて出ている状態。
+  const absorbed = view.anchor.kind === "committed";
 
   const submit = () => {
     const text = body.trim();
@@ -50,7 +52,11 @@ export function ThreadCard({
   };
 
   return (
-    <div className="kd-thread" data-lost={lost || undefined}>
+    <div
+      className="kd-thread"
+      data-lost={lost || undefined}
+      data-absorbed={absorbed || undefined}
+    >
       <div className="kd-thread__head">
         <span className="kd-thread__where">
           {view.thread.side === "old" ? "変更前" : "変更後"}{" "}
@@ -59,6 +65,12 @@ export function ThreadCard({
             : `${view.thread.lineStart}–${view.thread.lineEnd} 行目`}
         </span>
         <span className="kd-thread__id">#{view.thread.id}</span>
+        {absorbed ? (
+          <span className="kd-thread__origin" title="未コミットの変更に書かれ、このコミットに取り込まれた指摘">
+            <Icon name="move_down" size={12} />
+            取り込まれた指摘
+          </span>
+        ) : null}
         {notice ? (
           <span className="kd-thread__notice">
             <Icon name="alt_route" size={13} />
@@ -95,13 +107,15 @@ export function ThreadCard({
                 <Icon name={face.icon} size={14} />
               </span>
               <div className="kd-comment__main">
+                {/* 名前と時刻は吹き出しの外に置く。中に入れると、書いた内容と
+                    同じ重みで読まされる。 */}
                 <div className="kd-comment__meta">
                   <span className="kd-comment__author">{face.label}</span>
                   <span className="kd-comment__time">
                     {relativeTime(c.createdAt)}
                   </span>
                 </div>
-                <div className="kd-comment__body">
+                <div className="kd-comment__bubble">
                   <CommentBody text={c.body} />
                 </div>
               </div>
@@ -114,26 +128,32 @@ export function ThreadCard({
         <span className="kd-comment__avatar" data-who="you" aria-hidden>
           <Icon name="person" size={14} />
         </span>
-        <textarea
-          className="kd-textarea"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && e.metaKey) {
-              e.preventDefault();
-              submit();
-            }
-          }}
-          placeholder="返信する（⌘Enter で送信）"
-          rows={2}
-        />
-        <button
-          className="kd-btn kd-btn--primary kd-btn--sm"
-          onClick={submit}
-          disabled={!body.trim()}
-        >
-          返信
-        </button>
+        <div className="kd-thread__replybody">
+          <textarea
+            className="kd-textarea"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.metaKey) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            placeholder="返信する（⌘Enter で送信）"
+            rows={2}
+          />
+          {/* 送るボタンは書き終わりの側に置く。入力欄の横だと、書いている
+              途中の視線の先から外れる。 */}
+          <div className="kd-thread__replyfoot">
+            <button
+              className="kd-btn kd-btn--primary kd-btn--sm"
+              onClick={submit}
+              disabled={!body.trim()}
+            >
+              返信
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

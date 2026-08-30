@@ -9,6 +9,7 @@ import {
   selectedWorktreeAtom,
   appearanceOpenAtom,
   commentsOpenAtom,
+  jumpRequestAtom,
   settingsOpenAtom,
   shortcutsOpenAtom,
   sidebarOpenAtom,
@@ -140,11 +141,28 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
   const setSettingsOpen = useSetAtom(settingsOpenAtom);
   const [commentsOpen, setCommentsOpen] = useAtom(commentsOpenAtom);
   const threads = useAtomValue(threadsAtom);
+  const setJump = useSetAtom(jumpRequestAtom);
   const diff = useAtomValue(diffAtom);
 
-  const openThreads = threads.filter(
-    (v) => v.thread.status.kind === "open",
-  ).length;
+  const open = threads.filter((v) => v.thread.status.kind === "open");
+  const openThreads = open.length;
+
+  /**
+   * 押したら必ず 1 つ目の指摘まで飛ぶ。一覧を出すだけだと、そこから
+   * もう一度選ばせることになる。2 件以上あるときは、続きを辿れるよう
+   * 一覧も一緒に開く。
+   */
+  const openThreadList = () => {
+    const first = open[0];
+    if (first) {
+      setJump({
+        path: first.thread.file,
+        thread: first.thread.id,
+        nonce: Date.now(),
+      });
+    }
+    setCommentsOpen(openThreads > 1 ? true : !commentsOpen);
+  };
 
   const project = projects.find((p) => p.id === projectId) ?? projects[0];
 
@@ -223,8 +241,8 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
       <button
         className="kd-topbar__threads"
         data-on={commentsOpen || undefined}
-        onClick={() => setCommentsOpen(!commentsOpen)}
-        title="指摘の一覧"
+        onClick={openThreadList}
+        title={openThreads > 1 ? "1 つ目へ飛び、一覧を開く" : "指摘の場所へ飛ぶ"}
       >
         <Icon name="forum" size={16} />
         {openThreads > 0 ? (
