@@ -140,19 +140,24 @@ export function ThreadCard({
             onSubmit={submit}
             placeholder="返信する（⌘Enter で送信）"
           />
-          {body.trim() ? (
-            <div className="kd-reply__foot">
-              <button className="kd-btn kd-btn--sm" onClick={() => setBody("")}>
-                キャンセル
-              </button>
-              <button
-                className="kd-btn kd-btn--primary kd-btn--sm"
-                onClick={submit}
-              >
-                返信
-              </button>
-            </div>
-          ) : null}
+          {/* ボタンは最初から置く。書き始めて現れると、そのぶん下が
+              押し下げられ、読んでいた場所が動く。 */}
+          <div className="kd-reply__foot">
+            <button
+              className="kd-btn kd-btn--sm"
+              onClick={() => setBody("")}
+              disabled={!body.trim()}
+            >
+              キャンセル
+            </button>
+            <button
+              className="kd-btn kd-btn--primary kd-btn--sm"
+              onClick={submit}
+              disabled={!body.trim()}
+            >
+              返信
+            </button>
+          </div>
         </div>
       </div>
     </div>
