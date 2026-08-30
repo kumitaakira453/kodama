@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { faceOf } from "../../lib/author";
 import { relativeTime } from "../../lib/time";
@@ -49,7 +49,6 @@ export function ThreadCard({
   onDrop,
 }: ThreadCardProps) {
   const [body, setBody] = useState("");
-  const [writing, setWriting] = useState(false);
   const notice = describeAnchor(view.anchor);
   const lost =
     view.anchor.kind === "removed" || view.anchor.kind === "noFile";
@@ -62,7 +61,6 @@ export function ThreadCard({
     if (!text) return;
     onReply(view.thread.id, text);
     setBody("");
-    setWriting(false);
   };
 
   return (
@@ -78,6 +76,7 @@ export function ThreadCard({
             ? `${view.thread.lineStart} 行目`
             : `${view.thread.lineStart}–${view.thread.lineEnd} 行目`}
         </span>
+        <span className="kd-thread__id">#{view.thread.id}</span>
         {absorbed ? (
           <span
             className="kd-thread__origin"
@@ -128,58 +127,91 @@ export function ThreadCard({
         ))}
       </ul>
 
-      {writing ? (
-        <div className="kd-reply">
-          <span className="kd-face" data-who={me.kind} aria-hidden>
-            {me.initial}
-          </span>
-          <div className="kd-reply__body">
-            <textarea
-              className="kd-textarea"
-              value={body}
-              autoFocus
-              onChange={(e) => setBody(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && e.metaKey) {
-                  e.preventDefault();
-                  submit();
-                }
-                if (e.key === "Escape" && !body.trim()) setWriting(false);
-              }}
-              placeholder="返信する（⌘Enter で送信）"
-              rows={2}
-            />
+      <div className="kd-reply">
+        <span className="kd-face" data-who={me.kind} aria-hidden>
+          {me.initial}
+        </span>
+        <div className="kd-reply__body">
+          {/* 入力欄は最初から出しておき、伸びるのは高さだけ。書き始めた
+              とたんに別の形が現れると、押した先が変わったように見える。 */}
+          <GrowingArea
+            value={body}
+            onChange={setBody}
+            onSubmit={submit}
+            placeholder="返信する（⌘Enter で送信）"
+          />
+          {body.trim() ? (
             <div className="kd-reply__foot">
-              <button
-                className="kd-btn kd-btn--sm"
-                onClick={() => {
-                  setBody("");
-                  setWriting(false);
-                }}
-              >
-                やめる
+              <button className="kd-btn kd-btn--sm" onClick={() => setBody("")}>
+                キャンセル
               </button>
               <button
                 className="kd-btn kd-btn--primary kd-btn--sm"
                 onClick={submit}
-                disabled={!body.trim()}
               >
                 返信
               </button>
             </div>
-          </div>
+          ) : null}
         </div>
-      ) : (
-        <button className="kd-reply__open" onClick={() => setWriting(true)}>
-          <span className="kd-face" data-who={me.kind} aria-hidden>
-            {me.initial}
-          </span>
-          <span className="kd-reply__hint">返信…</span>
-        </button>
-      )}
+      </div>
     </div>
   );
 }
+
+/**
+ * 中身に合わせて伸びる入力欄。
+ *
+ * 行数を固定すると、短い返信には広すぎ、長い返信には足りない。伸びるのは
+ * 高さだけで、枠の幅も位置も変わらない。
+ */
+function GrowingArea({
+  value,
+  onChange,
+  onSubmit,
+  onCancel,
+  placeholder,
+  autoFocus = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  onCancel?: () => void;
+  placeholder?: string;
+  autoFocus?: boolean;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // 一度縮めてから測る。減らしたときに前の高さが残らない。
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_AREA_H)}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      className="kd-textarea kd-textarea--grow"
+      value={value}
+      autoFocus={autoFocus}
+      placeholder={placeholder}
+      rows={1}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.metaKey) {
+          e.preventDefault();
+          onSubmit();
+        }
+        if (e.key === "Escape") onCancel?.();
+      }}
+    />
+  );
+}
+
+/** 入力欄が伸びる上限。これを超えたら中でスクロールする。 */
+const MAX_AREA_H = 220;
 
 /**
  * 発言 1 つ。自分が書いたものだけ直せる。
@@ -242,26 +274,19 @@ function CommentRow({
 
         {editing ? (
           <div className="kd-comment__edit">
-            <textarea
-              className="kd-textarea"
+            <GrowingArea
               value={draft}
+              onChange={setDraft}
+              onSubmit={save}
+              onCancel={() => setEditing(false)}
               autoFocus
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && e.metaKey) {
-                  e.preventDefault();
-                  save();
-                }
-                if (e.key === "Escape") setEditing(false);
-              }}
-              rows={3}
             />
             <div className="kd-reply__foot">
               <button
                 className="kd-btn kd-btn--sm"
                 onClick={() => setEditing(false)}
               >
-                やめる
+                キャンセル
               </button>
               <button
                 className="kd-btn kd-btn--primary kd-btn--sm"

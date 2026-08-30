@@ -5,7 +5,7 @@ import { relativeTime } from "./time";
 
 describe("faceOf", () => {
   it("GUI が入れる you を人として扱う", () => {
-    expect(faceOf("you")).toMatchObject({ kind: "you", label: "あなた" });
+    expect(faceOf("you")).toMatchObject({ kind: "you", label: "you" });
   });
 
   it("CLI が既定で入れる AI を見分ける", () => {

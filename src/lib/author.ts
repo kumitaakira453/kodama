@@ -23,7 +23,7 @@ export interface AuthorFace {
 export function faceOf(author: string): AuthorFace {
   const name = author.trim();
   if (name.toLowerCase() === "you") {
-    return { kind: "you", label: "あなた", icon: "person", initial: "あ" };
+    return { kind: "you", label: "you", icon: "person", initial: "Y" };
   }
   if (name.toLowerCase() === "ai") {
     return { kind: "ai", label: "AI", icon: "smart_toy", initial: "AI" };

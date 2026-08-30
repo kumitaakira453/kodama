@@ -2337,34 +2337,10 @@ button.kd-row__expand:hover {
   gap: 6px;
 }
 
-.kd-thread__comment {
-  display: flex;
-  gap: 8px;
-  font-size: 12.5px;
-  line-height: 1.7;
-}
-
-.kd-thread__author {
-  flex: 0 0 auto;
-  color: var(--kd-muted);
-  font-weight: 600;
-}
-
-.kd-thread__body {
-  flex: 1 1 auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.kd-thread__reply,
 .kd-composer__foot {
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.kd-composer__foot {
   align-items: center;
+  gap: 8px;
 }
 
 .kd-composer__range {
@@ -2901,29 +2877,7 @@ button.kd-row__expand:hover {
   gap: 4px;
 }
 
-/* 返信。書き始めるまでは 1 行。空の入力欄が開いていると、送信済みの発言と
-   同じ重さで居座る。 */
-.kd-reply__open {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  width: 100%;
-  padding: 4px 0 0;
-  border: 0;
-  background: transparent;
-  color: var(--kd-muted);
-  cursor: text;
-  text-align: left;
-}
-
-.kd-reply__open:hover .kd-reply__hint {
-  color: var(--kd-fg-dim);
-}
-
-.kd-reply__hint {
-  font-size: 12.5px;
-}
-
+/* 返信。入力欄は最初から出しておく。 */
 .kd-reply {
   display: flex;
   gap: 9px;
@@ -2943,6 +2897,12 @@ button.kd-row__expand:hover {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+/* 伸びるのは高さだけ。手で引き伸ばせると、行数が中身と食い違う。 */
+.kd-textarea--grow {
+  resize: none;
+  overflow-y: auto;
 }
 
 /* ==========================================================================
