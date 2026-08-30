@@ -1864,13 +1864,118 @@ button.kd-row__expand:hover {
   }
 }
 
-/* 読み込み中。双葉を描き終えたあとも揺れ続けるので、止まって見えない。 */
-.kd-empty--loading .kd-leaf--left {
-  animation: kd-sway-left 2.4s var(--kd-ease-in-out) 900ms infinite alternate;
+/* 読み込み中は生え直しを繰り返す。
+   1 度きりだと、描き終えた瞬間から静止画になる。待っているのか止まって
+   いるのか見分けが付かず、いちばん不安な場面で画面が黙る。葉を数度ゆらす
+   だけでは、動いていると読み取れなかった。
+   1 周を 3s で揃え、出番は割合で置く。要素ごとに duration を変えると、
+   周回のたびに互いの位相がずれて絵が崩れる。 */
+.kd-empty--loading .kd-sprout__seed {
+  animation: kd-loop-seed 3s var(--kd-ease-out) infinite;
 }
 
-.kd-empty--loading .kd-leaf--right {
-  animation: kd-sway-right 2.4s var(--kd-ease-in-out) 900ms infinite alternate;
+.kd-empty--loading .kd-sprout__stem {
+  animation: kd-loop-stem 3s var(--kd-ease-out) infinite;
+}
+
+.kd-empty--loading .kd-sprout__outline {
+  animation: kd-loop-outline 3s var(--kd-ease-out) infinite;
+}
+
+/* 右の葉だけ少し遅らせる。同時に開くと 1 枚の形に見える。 */
+.kd-empty--loading .kd-leaf--right .kd-sprout__outline,
+.kd-empty--loading .kd-leaf--right .kd-sprout__fill {
+  animation-delay: 180ms;
+}
+
+.kd-empty--loading .kd-sprout__fill {
+  animation: kd-loop-fill 3s var(--kd-ease-out) infinite;
+}
+
+@keyframes kd-loop-seed {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  12%,
+  76% {
+    opacity: 0.5;
+    transform: translateY(0);
+  }
+  94%,
+  100% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+}
+
+@keyframes kd-loop-stem {
+  0%,
+  8% {
+    stroke-dashoffset: 40;
+    opacity: 1;
+  }
+  32%,
+  76% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  94%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes kd-loop-outline {
+  0%,
+  26% {
+    stroke-dashoffset: 110;
+    opacity: 1;
+  }
+  52%,
+  76% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  94%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes kd-loop-fill {
+  0%,
+  52% {
+    opacity: 0;
+  }
+  64%,
+  76% {
+    opacity: 0.22;
+  }
+  94%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 木漏れ日も同じ周期で息をする。地の明るさが動くと、絵が消える間も
+   画面が止まって見えない。 */
+.kd-empty--loading .kd-komorebi {
+  animation: kd-komorebi-breathe 3s var(--kd-ease-in-out) infinite;
+}
+
+@keyframes kd-komorebi-breathe {
+  0%,
+  100% {
+    opacity: 0.22;
+    transform: scale(0.9);
+  }
+  55% {
+    opacity: 0.5;
+    transform: scale(1.04);
+  }
 }
 
 .kd-empty__detail {
