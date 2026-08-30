@@ -129,8 +129,14 @@ interface TopBarProps {
 }
 
 /**
- * ドラッグ領域はこのコンテナだけに付ける。`data-tauri-drag-region` を持つ要素の
- * 子はドラッグ対象から外れるので、ボタン側に打ち消しの指定は要らない。
+ * ドラッグ領域は、押せない要素それぞれに付ける。
+ *
+ * `data-tauri-drag-region` はその要素自身にしか効かず、子は対象から外れる。
+ * コンテナだけに付けると、子で埋まった分は掴めず、要素の隙間しか残らない。
+ * ボタン側に打ち消しの指定は要らない。
+ *
+ * `-webkit-app-region` は併用しない。macOS の WKWebView で mousedown を
+ * 横取りし、`data-tauri-drag-region` と衝突して双方が効かなくなる。
  */
 export function TopBar({ projects, progress, onReload }: TopBarProps) {
   const [theme, setTheme] = useAtom(themeAtom);
@@ -223,10 +229,13 @@ export function TopBar({ projects, progress, onReload }: TopBarProps) {
 
       <RevisionMenu />
 
-      <div className="kd-topbar__spacer" />
+      {/* 掴める面。`data-tauri-drag-region` は付けた要素自身だけが対象で、
+          子は外れる。押せない要素にも一つずつ付けないと、握る場所が
+          要素の隙間しか残らない。 */}
+      <div className="kd-topbar__spacer" data-tauri-drag-region />
 
       {diff ? (
-        <span className="kd-topbar__stat">
+        <span className="kd-topbar__stat" data-tauri-drag-region>
           {diff.files.length} ファイル
           <span className="kd-add">
             +{diff.files.reduce((n, f) => n + f.additions, 0)}
