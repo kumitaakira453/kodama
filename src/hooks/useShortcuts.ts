@@ -9,6 +9,7 @@ import {
   lineSelectionAtom,
   shortcutsOpenAtom,
   sidebarOpenAtom,
+  viewedAtom,
   viewModeAtom,
   visibleFilesAtom,
   wordDiffAtom,
@@ -43,6 +44,7 @@ export function useShortcuts({
   const [wordDiff, setWordDiff] = useAtom(wordDiffAtom);
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
   const collapsed = useAtomValue(collapsedFilesAtom);
+  const viewed = useAtomValue(viewedAtom);
   const setOverrides = useSetAtom(fileOpenOverridesAtom);
   const setShortcutsOpen = useSetAtom(shortcutsOpenAtom);
 
@@ -54,7 +56,9 @@ export function useShortcuts({
       for (let i = 1; i <= files.length; i++) {
         const next = files[(from + step * i + files.length * i) % files.length];
         if (!next) continue;
-        if (onlyUnread && collapsed.has(next.path)) continue;
+        // 未読かどうかは閲覧済みの印で決める。折りたたみは量が多いときにも
+        // 掛かるので、読んでいないファイルまで飛ばしてしまう。
+        if (onlyUnread && viewed[next.path] === "viewed") continue;
         setJump({ path: next.path, nonce: Date.now() });
         return;
       }
@@ -147,6 +151,7 @@ export function useShortcuts({
     files,
     current,
     collapsed,
+    viewed,
     mode,
     wordDiff,
     sidebarOpen,

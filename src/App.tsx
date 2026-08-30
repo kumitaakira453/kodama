@@ -26,7 +26,6 @@ import { UpdateBanner } from "./components/ui/UpdateBanner";
 import { useTheme } from "./hooks/useTheme";
 import { useToast } from "./hooks/useToast";
 import {
-  fileOpenOverridesAtom,
   jumpRequestAtom,
   selectedWorktreeAtom,
   focusFilterAtom,
@@ -72,21 +71,6 @@ export default function App() {
   const setFocusFilter = useSetAtom(focusFilterAtom);
   const worktree = useAtomValue(selectedWorktreeAtom);
   const setJump = useSetAtom(jumpRequestAtom);
-  const setOpenOverrides = useSetAtom(fileOpenOverridesAtom);
-
-  /**
-   * ツリーで選んだファイルまで飛ぶ。畳んであれば開く。
-   *
-   * 見出しだけが出て中身が畳まれたままだと、選んだのに読めない。選ぶという
-   * 操作は「そこを読みたい」なので、開くところまでが 1 つの動作になる。
-   */
-  const jumpToFile = useCallback(
-    (path: string) => {
-      setOpenOverrides((prev) => ({ ...prev, [path]: true }));
-      setJump({ path, nonce: Date.now() });
-    },
-    [setJump, setOpenOverrides],
-  );
   const [dragging, setDragging] = useState(false);
 
   const handleAddProject = useCallback(async () => {
@@ -185,7 +169,7 @@ export default function App() {
           <>
             <aside className="kd-sidebar" style={{ width: sidebarWidth }}>
               <TreePane
-                onJump={jumpToFile}
+                onJump={(path) => setJump({ path, nonce: Date.now() })}
               />
             </aside>
             <Resizer onDrag={dragSidebar} />

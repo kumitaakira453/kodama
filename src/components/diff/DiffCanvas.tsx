@@ -306,15 +306,22 @@ export function DiffCanvas({
     [selection, worktree, diff, files, onAddThread, setSelection],
   );
 
-  // ツリーからの「ここまで飛べ」を受ける。
+  /**
+   * 「ここまで飛べ」を受ける。畳んであれば開く。
+   *
+   * 見出しまで飛んでも中身が畳まれたままだと、選んだのに読めない。ツリーの
+   * クリックもキーボードの移動もここを通るので、開く判断はこの 1 か所で足りる。
+   * 開いても増える行は見出しより下なので、飛び先の位置は変わらない。
+   */
   useEffect(() => {
     if (!jump) return;
     const index = headerIndex.get(jump.path);
     if (index !== undefined) {
+      setOverrides((prev) => ({ ...prev, [jump.path]: true }));
       virtualizer.scrollToIndex(index, { align: "start" });
     }
     setJump(null);
-  }, [jump, headerIndex, virtualizer, setJump]);
+  }, [jump, headerIndex, virtualizer, setJump, setOverrides]);
 
   // 仮想化は行 DOM を再利用する。スクロール中にトランジションが走ると色が
   // 補間され続けて濁るので、動いている間だけ止める。
