@@ -9,10 +9,8 @@ import {
   useState,
 } from "react";
 
-import { useFileFilter } from "../../hooks/useFileFilter";
 import { useHighlight } from "../../hooks/useHighlight";
 import { useToast } from "../../hooks/useToast";
-import { applyFilter } from "../../lib/diff/filter";
 import { api } from "../../lib/ipc";
 import {
   buildRows,
@@ -37,10 +35,12 @@ import {
   diffAtom,
   diffLoadingAtom,
   expandedAtom,
+  fileOpenOverridesAtom,
   jumpRequestAtom,
   lineSelectionAtom,
   selectedWorktreeAtom,
   viewModeAtom,
+  visibleFilesAtom,
   wordDiffAtom,
   type LineSelection,
 } from "../../state/atoms";
@@ -141,7 +141,8 @@ export function DiffCanvas({
   const mode = useAtomValue(viewModeAtom);
   const wordDiff = useAtomValue(wordDiffAtom);
   const worktree = useAtomValue(selectedWorktreeAtom);
-  const [collapsed, setCollapsed] = useAtom(collapsedFilesAtom);
+  const collapsed = useAtomValue(collapsedFilesAtom);
+  const setOverrides = useSetAtom(fileOpenOverridesAtom);
   const [jump, setJump] = useAtom(jumpRequestAtom);
   const [selection, setSelection] = useAtom(lineSelectionAtom);
   const [expanded, setExpanded] = useAtom(expandedAtom);
@@ -149,11 +150,7 @@ export function DiffCanvas({
   const { showError } = useToast();
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileFilter = useFileFilter();
-  const files = useMemo(
-    () => applyFilter(diff?.files ?? [], fileFilter),
-    [diff, fileFilter],
-  );
+  const files = useAtomValue(visibleFilesAtom);
   /**
    * なぞっているあいだは入力欄を出さない。
    *
@@ -188,13 +185,8 @@ export function DiffCanvas({
 
   const toggleFile = useCallback(
     (path: string) =>
-      setCollapsed((prev) => {
-        const next = new Set(prev);
-        if (next.has(path)) next.delete(path);
-        else next.add(path);
-        return next;
-      }),
-    [setCollapsed],
+      setOverrides((prev) => ({ ...prev, [path]: collapsed.has(path) })),
+    [collapsed, setOverrides],
   );
 
   /** 押した行。ここを軸にして、なぞった先まで範囲を伸ばす。 */

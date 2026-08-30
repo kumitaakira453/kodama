@@ -4,12 +4,13 @@ import { useEffect } from "react";
 import {
   collapsedFilesAtom,
   currentFileAtom,
-  diffAtom,
+  fileOpenOverridesAtom,
   jumpRequestAtom,
   lineSelectionAtom,
   shortcutsOpenAtom,
   sidebarOpenAtom,
   viewModeAtom,
+  visibleFilesAtom,
   wordDiffAtom,
 } from "../state/atoms";
 
@@ -32,19 +33,20 @@ export function useShortcuts({
   onToggleViewed,
   onFocusFilter,
 }: ShortcutHandlers) {
-  const diff = useAtomValue(diffAtom);
+  // 移動先は絞り込みに出ているものだけ。隠したファイルへ飛ぶと、画面には
+  // 出ていないところで現在位置だけが動く。
+  const files = useAtomValue(visibleFilesAtom);
   const current = useAtomValue(currentFileAtom);
   const setJump = useSetAtom(jumpRequestAtom);
   const setSelection = useSetAtom(lineSelectionAtom);
   const [mode, setMode] = useAtom(viewModeAtom);
   const [wordDiff, setWordDiff] = useAtom(wordDiffAtom);
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
-  const [collapsed, setCollapsed] = useAtom(collapsedFilesAtom);
+  const collapsed = useAtomValue(collapsedFilesAtom);
+  const setOverrides = useSetAtom(fileOpenOverridesAtom);
   const setShortcutsOpen = useSetAtom(shortcutsOpenAtom);
 
   useEffect(() => {
-    const files = diff?.files ?? [];
-
     const jumpBy = (step: number, onlyUnread: boolean) => {
       if (files.length === 0) return;
       const index = files.findIndex((f) => f.path === current);
@@ -123,12 +125,10 @@ export function useShortcuts({
         case "c":
           if (current) {
             e.preventDefault();
-            setCollapsed((prev) => {
-              const next = new Set(prev);
-              if (next.has(current)) next.delete(current);
-              else next.add(current);
-              return next;
-            });
+            setOverrides((prev) => ({
+              ...prev,
+              [current]: collapsed.has(current),
+            }));
           }
           break;
         case "?":
@@ -144,7 +144,7 @@ export function useShortcuts({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [
-    diff,
+    files,
     current,
     collapsed,
     mode,
@@ -155,7 +155,7 @@ export function useShortcuts({
     setMode,
     setWordDiff,
     setSidebarOpen,
-    setCollapsed,
+    setOverrides,
     setShortcutsOpen,
     onAddProject,
     onReload,

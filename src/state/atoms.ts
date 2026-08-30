@@ -1,8 +1,11 @@
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
+import { collapsedFiles } from "../lib/diff/collapse";
+import { applyFilter, type FileFilter } from "../lib/diff/filter";
 import type { CommitSelection } from "../lib/revisions";
 import type {
+  DiffFile,
   DiffResponse,
   PrInfo,
   Project,
@@ -111,8 +114,14 @@ export const diffLoadingAtom = atom<boolean>(false);
 
 // ---- diff の表示状態 ----
 
-/** 折りたたんでいるファイル。閲覧済みと生成ファイルは既定で畳む。 */
-export const collapsedFilesAtom = atom<Set<string>>(new Set<string>());
+/**
+ * 自分で開閉したファイル。値は「開いているか」。
+ *
+ * 折りたたみの状態そのものは持たない。既定は絞り込みを通した一覧から毎回
+ * 導き、ここには明示的な操作だけを残す。状態として抱えると、絞り込みを
+ * 変えても読み込んだ時点の判断が居座る。
+ */
+export const fileOpenOverridesAtom = atom<Record<string, boolean>>({});
 /** いま画面の上端に見えているファイル。左ツリーの強調に使う。 */
 export const currentFileAtom = atom<string | null>(null);
 /**
@@ -178,6 +187,36 @@ export const threadsAtom = atom<ThreadView[]>([]);
 
 /** ファイルのパス → 閲覧済みの状態。3 値で持つ。 */
 export const viewedAtom = atom<Record<string, ViewedStatus>>({});
+
+// ---- 絞り込みと折りたたみ。両方が同じ一覧を見るよう、ここで導く ----
+
+/**
+ * いまの絞り込み条件。ツリーと差分の両方で同じものを使う。
+ *
+ * 片方だけに効かせると、左に出ていないファイルが右に流れてきて、
+ * 何を隠したのか分からなくなる。
+ */
+export const fileFilterStateAtom = atom<FileFilter>((get) => ({
+  query: get(fileFilterAtom).trim().toLowerCase(),
+  hiddenExtensions: get(hiddenExtensionsAtom),
+  showDeleted: get(showDeletedAtom),
+  showViewed: get(showViewedAtom),
+  viewed: get(viewedAtom),
+}));
+
+/** 絞り込みを通ったファイル。 */
+export const visibleFilesAtom = atom<DiffFile[]>((get) =>
+  applyFilter(get(diffAtom)?.files ?? [], get(fileFilterStateAtom)),
+);
+
+/** 折りたたんでいるファイル。絞り込みの結果に自分の操作を重ねて導く。 */
+export const collapsedFilesAtom = atom<Set<string>>((get) =>
+  collapsedFiles(
+    get(visibleFilesAtom),
+    get(viewedAtom),
+    get(fileOpenOverridesAtom),
+  ),
+);
 
 /** 行番号 gutter で選んでいる範囲。指摘の対象になる。 */
 export interface LineSelection {

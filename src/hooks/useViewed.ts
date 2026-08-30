@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { api } from "../lib/ipc";
 import type { ViewedStatus } from "../lib/types";
 import {
-  collapsedFilesAtom,
   diffAtom,
+  fileOpenOverridesAtom,
   viewedAtom,
 } from "../state/atoms";
 import { useToast } from "./useToast";
@@ -28,7 +28,7 @@ export interface ReviewProgress {
 export function useViewed() {
   const diff = useAtomValue(diffAtom);
   const [viewed, setViewed] = useAtom(viewedAtom);
-  const setCollapsed = useSetAtom(collapsedFilesAtom);
+  const setOverrides = useSetAtom(fileOpenOverridesAtom);
   const { showError } = useToast();
   const generation = useRef(0);
 
@@ -65,20 +65,14 @@ export function useViewed() {
         if (gen !== generation.current) return;
         const next: Record<string, ViewedStatus> = {};
         for (const v of list) next[v.file] = v.status;
+        // 読み終えたファイルは畳んで出す。畳む判断は状態から導かれるので、
+        // ここで持つのは読んだかどうかだけでよい。
         setViewed(next);
-        // 読み終えたファイルは畳んでおく。開いたままだと未読を探しにくい。
-        setCollapsed((prev) => {
-          const merged = new Set(prev);
-          for (const v of list) {
-            if (v.status === "viewed") merged.add(v.file);
-          }
-          return merged;
-        });
       })
       .catch((e: unknown) => {
         if (gen === generation.current) showError(e);
       });
-  }, [revisionKey, hashes, setViewed, setCollapsed, showError]);
+  }, [revisionKey, hashes, setViewed, showError]);
 
   const toggle = useCallback(
     async (file: string) => {
@@ -86,12 +80,9 @@ export function useViewed() {
       const next = viewed[file] === "viewed" ? false : true;
       // 押した瞬間に反映する。往復を待つと反応が鈍い。
       setViewed((prev) => ({ ...prev, [file]: next ? "viewed" : "unviewed" }));
-      setCollapsed((prev) => {
-        const s = new Set(prev);
-        if (next) s.add(file);
-        else s.delete(file);
-        return s;
-      });
+      // 読み終えたら畳み、印を外したら開く。押した本人の意図なので、
+      // 既定より優先する。
+      setOverrides((prev) => ({ ...prev, [file]: !next }));
       try {
         await api.setViewed(revisionKey, file, hashes[file] ?? "", next);
       } catch (e) {
@@ -100,7 +91,7 @@ export function useViewed() {
         showError(e);
       }
     },
-    [revisionKey, viewed, hashes, setViewed, setCollapsed, showError],
+    [revisionKey, viewed, hashes, setViewed, setOverrides, showError],
   );
 
   const progress = useMemo((): ReviewProgress => {

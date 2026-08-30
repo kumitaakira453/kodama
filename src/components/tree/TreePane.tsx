@@ -2,8 +2,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { useFileFilter } from "../../hooks/useFileFilter";
-import { applyFilter, extensionCounts } from "../../lib/diff/filter";
+import { extensionCounts } from "../../lib/diff/filter";
 import { buildTree, flattenTree, type TreeRow } from "../../lib/diff/tree";
 import type { DiffFile, DiffFileStatus } from "../../lib/types";
 import {
@@ -14,6 +13,7 @@ import {
   hiddenExtensionsAtom,
   showDeletedAtom,
   showViewedAtom,
+  visibleFilesAtom,
 } from "../../state/atoms";
 import { Dropdown } from "../ui/Dropdown";
 import { Icon } from "../ui/Icon";
@@ -53,15 +53,15 @@ export function TreePane({ onJump }: TreePaneProps) {
   }, [focusRequest]);
 
   const files = diff?.files ?? [];
-  const fileFilter = useFileFilter();
+  const visible = useAtomValue(visibleFilesAtom);
 
-  const { normal, generated } = useMemo(() => {
-    const matched = applyFilter(files, fileFilter);
-    return {
-      normal: matched.filter((f) => !f.generated),
-      generated: matched.filter((f) => f.generated),
-    };
-  }, [files, fileFilter]);
+  const { normal, generated } = useMemo(
+    () => ({
+      normal: visible.filter((f) => !f.generated),
+      generated: visible.filter((f) => f.generated),
+    }),
+    [visible],
+  );
 
   const nodes = useMemo(() => buildTree(normal), [normal]);
 
