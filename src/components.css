@@ -1034,6 +1034,40 @@
   min-width: 8px;
 }
 
+/* パスのコピー。押せることは分かる濃さで、名前より前に出ない。 */
+.kd-fhead__copy {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: var(--kd-muted);
+  cursor: pointer;
+  opacity: 0.55;
+  transition:
+    opacity var(--kd-dur-instant) var(--kd-ease-out),
+    background var(--kd-dur-instant) var(--kd-ease-out),
+    color var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-fhead:hover .kd-fhead__copy {
+  opacity: 1;
+}
+
+.kd-fhead__copy:hover {
+  background: var(--kd-hover);
+  color: var(--kd-fg);
+}
+
+/* 渡し終えた合図。色だけ変える。大きさが変わると行が動く。 */
+.kd-fhead__copy[data-done] {
+  opacity: 1;
+  color: var(--kd-accent);
+}
+
 .kd-fhead__stat {
   display: flex;
   align-items: center;

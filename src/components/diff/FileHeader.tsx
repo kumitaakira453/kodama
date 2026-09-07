@@ -1,3 +1,6 @@
+import { useEffect, useRef, useState } from "react";
+
+import { copyText } from "../../lib/clipboard";
 import type { AppTarget, DiffFile, ViewedStatus } from "../../lib/types";
 import { Dropdown } from "../ui/Dropdown";
 import { Icon } from "../ui/Icon";
@@ -47,6 +50,8 @@ export function FileHeader({
         ) : null}
         <PathLabel path={file.path} />
       </span>
+
+      <CopyPath path={file.path} />
 
       <span className="kd-fhead__stat">
         {file.additions > 0 ? (
@@ -102,6 +107,42 @@ export function FileHeader({
         }
       </Dropdown>
     </div>
+  );
+}
+
+/**
+ * パスを貼り付け先へ渡すボタン。
+ *
+ * 渡すのはリポジトリからの相対パス。見えているものと同じでないと、貼った先で
+ * 何が入ったのか確かめ直すことになる。
+ */
+function CopyPath({ path }: { path: string }) {
+  const [done, setDone] = useState(false);
+  const timer = useRef(0);
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const copy = () => {
+    void copyText(path)
+      .then(() => {
+        // 押した手応えを短く返す。通知を出すと、読んでいる場所から目が離れる。
+        setDone(true);
+        window.clearTimeout(timer.current);
+        timer.current = window.setTimeout(() => setDone(false), 1200);
+      })
+      .catch(() => setDone(false));
+  };
+
+  return (
+    <button
+      className="kd-fhead__copy"
+      data-done={done || undefined}
+      onClick={copy}
+      title="パスをコピーする"
+      aria-label="パスをコピーする"
+    >
+      <Icon name={done ? "check" : "content_copy"} size={14} />
+    </button>
   );
 }
 
