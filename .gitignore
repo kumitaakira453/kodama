@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ローカル専用の文書。リモートには出さない
+docs/
