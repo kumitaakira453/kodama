@@ -22,9 +22,14 @@ export function useRevisions() {
   const { showError } = useToast();
   const generation = useRef(0);
 
+  // worktree が変わったときだけ捨てる。起点を変えただけで空にすると、
+  // 読み直すあいだ一覧が消えて下が跳ねる。前の一覧を置いたまま差し替える。
+  useEffect(() => {
+    setRevisions(null);
+  }, [worktree, setRevisions]);
+
   useEffect(() => {
     const gen = ++generation.current;
-    setRevisions(null);
     if (!worktree) return;
 
     api

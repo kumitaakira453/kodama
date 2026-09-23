@@ -1606,10 +1606,12 @@ button.kd-row__expand:hover {
   animation: kd-modal-in var(--kd-dur-fast) var(--kd-ease-out);
 }
 
-/* 選ぶだけのダイアログ。読ませる文章が無いので狭くする。 */
+/* 選ぶだけのダイアログ。読ませる文章が無いので狭くする。
+   高さは固定する。中身の数で決めると、起点を変えてコミットの数が変わる
+   たびに下が跳ね、開いているプルダウンの下で床が動く。 */
 .kd-modal--sm {
   width: min(460px, calc(100vw - 64px));
-  max-height: min(560px, calc(100vh - 96px));
+  height: min(560px, calc(100vh - 96px));
 }
 
 @keyframes kd-modal-in {
