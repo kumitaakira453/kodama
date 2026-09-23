@@ -116,6 +116,20 @@ export const selectedWorktreeAtom = atomWithStorage<string | null>(
   undefined,
   sync,
 );
+/**
+ * 比較の起点。worktree ごとに覚える。
+ *
+ * 既定は kodama が解いた分岐元で、ここに入っているときだけそれを上書きする。
+ * worktree をまたいで持ち回すと、その枝に無い ref を起点にしたまま開いて
+ * 「差分が出ない」になる。
+ */
+export const baseOverridesAtom = atomWithStorage<Record<string, string>>(
+  "kodama.baseOverrides",
+  {},
+  undefined,
+  sync,
+);
+
 export const commitSelectionAtom = atomWithStorage<CommitSelection>(
   "kodama.commitSelection",
   // 一番広いところから始める。レビューで見たいのはたいてい全体で、

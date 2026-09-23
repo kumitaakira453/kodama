@@ -64,13 +64,28 @@ pub struct CommitInfo {
     pub relative: String,
 }
 
+/// 比較の起点に選べる ref。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BaseRef {
+    /// `origin/develop` のような短い名前。
+    pub name: String,
+    /// リモート追跡か、手元のブランチか。
+    pub remote: bool,
+    /// 最終コミットの相対表記。どれが生きている枝かの手がかりになる。
+    pub relative: String,
+}
+
 /// revision セレクタに並べる候補。
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RevisionList {
     pub commits: Vec<CommitInfo>,
-    pub branches: Vec<String>,
+    /// 起点に選べる ref。リモート追跡を先に置く。
+    pub bases: Vec<BaseRef>,
     /// merge-base の算出に使える既定の base ref。見つからなければ None。
     /// これが決まっているとき、`commits` は分岐点から現在までに絞られる。
     pub default_base: Option<String>,
+    /// いま `commits` の絞り込みに使っている起点。指定が無ければ既定と同じ。
+    pub base: Option<String>,
 }

@@ -38,8 +38,11 @@ export const api = {
   pullRequests: (projectId: string) =>
     invoke<Record<string, PrInfo>>("pull_requests", { projectId }),
 
-  listRevisions: (worktree: string, limit: number = REVISION_LIMIT) =>
-    invoke<RevisionList>("list_revisions", { worktree, limit }),
+  listRevisions: (
+    worktree: string,
+    base: string | null,
+    limit: number = REVISION_LIMIT,
+  ) => invoke<RevisionList>("list_revisions", { worktree, limit, base }),
 
   loadDiff: (worktree: string, spec: DiffSpec, context: number) =>
     invoke<DiffResponse>("load_diff", { worktree, spec, context }),

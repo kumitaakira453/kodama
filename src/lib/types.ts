@@ -57,14 +57,25 @@ export interface PrInfo {
   url: string;
 }
 
+/** 比較の起点に選べる ref。 */
+export interface BaseRef {
+  name: string;
+  /** リモート追跡か、手元のブランチか。 */
+  remote: boolean;
+  relative: string;
+}
+
 export interface RevisionList {
   commits: CommitInfo[];
-  branches: string[];
+  /** 起点に選べる ref。 */
+  bases: BaseRef[];
   /**
    * merge-base 比較に使える既定の base ref。見つからなければ null。
    * これが決まっているとき、`commits` は分岐点から現在までに絞られる。
    */
   defaultBase: string | null;
+  /** いま commits の絞り込みに使っている起点。指定が無ければ既定と同じ。 */
+  base: string | null;
 }
 
 /** 何と何の差分を見るか。 */

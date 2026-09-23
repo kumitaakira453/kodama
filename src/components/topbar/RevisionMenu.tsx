@@ -14,6 +14,7 @@ import {
 } from "../../lib/revisions";
 import type { CommitInfo, WorktreeStatus } from "../../lib/types";
 import {
+  baseOverridesAtom,
   commitSelectionAtom,
   revisionsAtom,
   threadMarksAtom,
@@ -21,6 +22,7 @@ import {
   statusesAtom,
 } from "../../state/atoms";
 import { Button } from "../ui/Button";
+import { Dropdown } from "../ui/Dropdown";
 import { Icon } from "../ui/Icon";
 import { Modal } from "../ui/Modal";
 
@@ -45,7 +47,8 @@ export function RevisionMenu() {
   const [open, setOpen] = useState(false);
 
   const commits = revisions?.commits ?? [];
-  const defaultBase = revisions?.defaultBase ?? null;
+  // 一覧の説明には、いま効いている起点を使う。既定とは限らない。
+  const base = revisions?.base ?? null;
 
   return (
     <div className="kd-dd">
@@ -53,7 +56,7 @@ export function RevisionMenu() {
         className="kd-dd__button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        title={explainSelection(selection, commits, defaultBase)}
+        title={explainSelection(selection, commits, base)}
       >
         <Icon name="difference" size={15} />
         <span className="kd-dd__label">
@@ -91,7 +94,7 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
   const marks = useAtomValue(threadMarksAtom);
 
   const commits = revisions?.commits ?? [];
-  const defaultBase = revisions?.defaultBase ?? null;
+  const base = revisions?.base ?? null;
   const allCommits = draft ? covers(draft, "branch") : false;
   const range = draft ? resolveRange(draft, commits) : null;
   const count = allCommits ? commits.length : (range?.count ?? 0);
@@ -116,7 +119,7 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
         <>
           <p className="kd-modal__note">
             {draft
-              ? explainSelection(draft, commits, defaultBase)
+              ? explainSelection(draft, commits, base)
               : "何も選ばれていません"}
           </p>
           <span className="kd-modal__actions">
@@ -137,12 +140,14 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
       }
     >
       <div className="kd-revmenu">
+        <BasePicker />
+
         <PickRow
           threads={marks.byKey[`everything:${worktree}`] ?? 0}
           label={PSEUDO_LABELS.everything}
           detail={
-            defaultBase
-              ? `${defaultBase} との分岐点から、未コミットの変更まで`
+            base
+              ? `${base} との分岐点から、未コミットの変更まで`
               : "最初のコミットから、未コミットの変更まで"
           }
           icon="all_inclusive"
@@ -176,8 +181,8 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
               threads={marks.ranged}
               label={PSEUDO_LABELS.branch}
               detail={
-                defaultBase
-                  ? `${defaultBase} との分岐点から ${commits.length} コミット`
+                base
+                  ? `${base} との分岐点から ${commits.length} コミット`
                   : `最初のコミットから ${commits.length} コミット`
               }
               checked={allCommits}
@@ -225,6 +230,109 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
         )}
       </div>
     </Modal>
+  );
+}
+
+/**
+ * 比較の起点。
+ *
+ * 既定は kodama が解いた分岐元。当たることが多いが、途中で base 側を
+ * 取り込んだ枝では分岐点が古いままになり、取り込んだぶんの変更まで差分に
+ * 出る。別の枝と比べたいこともある。選び直せるようにする。
+ *
+ * 起点を変えると並ぶコミットも変わるので、選んだ時点で読み直す。
+ */
+function BasePicker() {
+  const worktree = useAtomValue(selectedWorktreeAtom);
+  const revisions = useAtomValue(revisionsAtom);
+  const [overrides, setOverrides] = useAtom(baseOverridesAtom);
+
+  const base = revisions?.base ?? null;
+  const defaultBase = revisions?.defaultBase ?? null;
+  const bases = revisions?.bases ?? [];
+  const overridden = Boolean(worktree && overrides[worktree]);
+
+  const pick = (name: string | null) => {
+    if (!worktree) return;
+    setOverrides((prev) => {
+      const next = { ...prev };
+      if (name === null) delete next[worktree];
+      else next[worktree] = name;
+      return next;
+    });
+  };
+
+  return (
+    <div className="kd-basepick">
+      <span className="kd-basepick__label">起点</span>
+      <Dropdown
+        icon="alt_route"
+        label={base ?? "分岐元なし"}
+        title="比較の起点を選ぶ"
+        width={280}
+      >
+        {(close) => (
+          <>
+            {defaultBase ? (
+              <button
+                className="kd-menuitem"
+                data-selected={!overridden || undefined}
+                onClick={() => {
+                  pick(null);
+                  close();
+                }}
+              >
+                <Icon
+                  name={
+                    overridden ? "radio_button_unchecked" : "radio_button_checked"
+                  }
+                  size={15}
+                />
+                <span className="kd-menuitem__text">{defaultBase}</span>
+                <span className="kd-menuitem__hint">分岐元</span>
+              </button>
+            ) : null}
+
+            {bases.length > 0 ? <div className="kd-menu__sep" /> : null}
+
+            {bases
+              .filter((b) => b.name !== defaultBase)
+              .map((b) => (
+                <button
+                  key={b.name}
+                  className="kd-menuitem"
+                  data-selected={b.name === base || undefined}
+                  onClick={() => {
+                    pick(b.name);
+                    close();
+                  }}
+                >
+                  <Icon
+                    name={
+                      b.name === base
+                        ? "radio_button_checked"
+                        : "radio_button_unchecked"
+                    }
+                    size={15}
+                  />
+                  <span className="kd-menuitem__text">{b.name}</span>
+                  <span className="kd-menuitem__hint">{b.relative}</span>
+                </button>
+              ))}
+
+            {bases.length === 0 ? (
+              <p className="kd-menu__note">比べられる枝がありません</p>
+            ) : null}
+          </>
+        )}
+      </Dropdown>
+
+      {overridden ? (
+        <span className="kd-basepick__note" title="既定の分岐元ではありません">
+          既定から変更中
+        </span>
+      ) : null}
+    </div>
   );
 }
 

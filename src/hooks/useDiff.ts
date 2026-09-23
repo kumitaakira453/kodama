@@ -30,7 +30,7 @@ export function useDiff() {
   const spec = buildSpec(
     selection,
     revisions?.commits ?? [],
-    revisions?.defaultBase ?? null,
+    revisions?.base ?? null,
   );
   // spec は毎描画で作り直されるので、同一性ではなく内容で依存を判定する。
   const key = spec ? JSON.stringify(spec) : null;

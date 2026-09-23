@@ -3,7 +3,7 @@
 //! libgit2 は使わず CLI を叩く。ユーザーの `~/.gitconfig` が出力形式を変えていても
 //! パーサが壊れないよう、書式に影響する設定は呼び出しごとに打ち消す。
 
-use crate::domain::models::{CommitInfo, WorktreeInfo};
+use crate::domain::models::{BaseRef, CommitInfo, WorktreeInfo};
 use crate::domain::spec::BlobRef;
 use crate::error::{KdError, KdResult};
 use crate::infra::shell::{capture, capture_bytes};
@@ -205,23 +205,49 @@ impl Git {
         Ok(parse_commits(&out))
     }
 
-    /// ローカルブランチ名を最終コミットの新しい順に返す。
-    pub fn local_branches(&self, worktree: &str) -> Vec<String> {
+    /// 起点に選べる ref を、最終コミットの新しい順に返す。
+    ///
+    /// リモート追跡も含める。分岐元はたいてい `origin/develop` のような
+    /// リモートの ref で、手元のブランチだけでは既定の起点すら一覧に出ない。
+    pub fn base_refs(&self, worktree: &str) -> Vec<BaseRef> {
         self.run(
             worktree,
             &[
                 "for-each-ref",
                 "--sort=-committerdate",
-                "--format=%(refname:short)",
+                "--format=%(refname:short)\t%(committerdate:relative)",
                 "refs/heads/",
+                "refs/remotes/",
             ],
             false,
         )
         .unwrap_or_default()
         .lines()
-        .filter(|l| !l.trim().is_empty())
-        .map(str::to_string)
+        .filter_map(|line| {
+            let (name, relative) = line.split_once('\t')?;
+            let name = name.trim();
+            // `origin/HEAD` は既定ブランチへの別名で、選ぶ対象ではない。
+            if name.is_empty() || name.ends_with("/HEAD") {
+                return None;
+            }
+            Some(BaseRef {
+                remote: name.contains('/') && !self.is_local_branch(worktree, name),
+                name: name.to_string(),
+                relative: relative.trim().to_string(),
+            })
+        })
         .collect()
+    }
+
+    /// 手元のブランチか。`feature/x` のように `/` を含む名前があるので、
+    /// 名前の形だけでリモートと決めつけない。
+    fn is_local_branch(&self, worktree: &str, name: &str) -> bool {
+        self.run(
+            worktree,
+            &["show-ref", "--verify", "--quiet", &format!("refs/heads/{name}")],
+            false,
+        )
+        .is_ok()
     }
 
     pub fn ref_exists(&self, worktree: &str, r#ref: &str) -> bool {
