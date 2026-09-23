@@ -63,6 +63,8 @@ export interface BaseRef {
   /** リモート追跡か、手元のブランチか。 */
   remote: boolean;
   relative: string;
+  /** 最終コミットの件名。名前だけでは、どこまで進んだ枝か分からない。 */
+  subject: string;
 }
 
 export interface RevisionList {

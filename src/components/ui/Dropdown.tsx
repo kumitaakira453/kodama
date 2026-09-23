@@ -30,10 +30,10 @@ interface DropdownProps {
 const EDGE = 8;
 
 /** 高さの上限。画面いっぱいに伸ばすと、一覧なのか画面なのか分からなくなる。 */
-const MAX_HEIGHT = 340;
+const MAX_HEIGHT = 300;
 
 /** 幅の上限。長い ref 名に引きずられて全幅まで広がるのを止める。 */
-const MAX_WIDTH = 420;
+const MAX_WIDTH = 520;
 
 /** これより下が狭ければ上向きに開く。 */
 const MIN_BELOW = 180;

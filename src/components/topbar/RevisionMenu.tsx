@@ -269,7 +269,7 @@ function BasePicker() {
         icon="alt_route"
         label={base ?? "分岐元なし"}
         title="比較の起点を選ぶ"
-        width={280}
+        width={480}
       >
         {(close) => (
           <BaseList
@@ -315,6 +315,7 @@ function BaseList({
 }) {
   const [query, setQuery] = useState("");
   const needle = query.trim().toLowerCase();
+  const defaultRef = bases.find((b) => b.name === defaultBase) ?? null;
   const shown = bases.filter(
     (b) =>
       b.name !== defaultBase &&
@@ -337,42 +338,28 @@ function BaseList({
         </div>
       ) : null}
 
-      {defaultBase && (needle === "" || defaultBase.toLowerCase().includes(needle)) ? (
-        <button
-          className="kd-menuitem"
-          data-selected={!overridden || undefined}
-          onClick={() => onPick(null)}
-          title={defaultBase}
-        >
-          <Icon
-            name={overridden ? "radio_button_unchecked" : "radio_button_checked"}
-            size={15}
+      <div className="kd-basemenu">
+        {defaultBase &&
+        (needle === "" || defaultBase.toLowerCase().includes(needle)) ? (
+          <BaseRow
+            name={defaultBase}
+            detail={defaultRef}
+            selected={!overridden}
+            isDefault
+            onPick={() => onPick(null)}
           />
-          <span className="kd-menuitem__text">{defaultBase}</span>
-          <span className="kd-menuitem__hint">分岐元</span>
-        </button>
-      ) : null}
+        ) : null}
 
-      {shown.length > 0 ? <div className="kd-menu__sep" /> : null}
-
-      {shown.map((b) => (
-        <button
-          key={b.name}
-          className="kd-menuitem"
-          data-selected={b.name === base || undefined}
-          onClick={() => onPick(b.name)}
-          title={b.name}
-        >
-          <Icon
-            name={
-              b.name === base ? "radio_button_checked" : "radio_button_unchecked"
-            }
-            size={15}
+        {shown.map((b) => (
+          <BaseRow
+            key={b.name}
+            name={b.name}
+            detail={b}
+            selected={b.name === base}
+            onPick={() => onPick(b.name)}
           />
-          <span className="kd-menuitem__text">{b.name}</span>
-          <span className="kd-menuitem__hint">{b.relative}</span>
-        </button>
-      ))}
+        ))}
+      </div>
 
       {bases.length === 0 ? (
         <p className="kd-menu__note">比べられる枝がありません</p>
@@ -381,6 +368,44 @@ function BaseList({
         <p className="kd-menu__note">一致する枝がありません</p>
       ) : null}
     </>
+  );
+}
+
+/** 起点 1 件。名前・最終コミット・時刻を、worktree の一覧と同じ並びで出す。 */
+function BaseRow({
+  name,
+  detail,
+  selected,
+  isDefault = false,
+  onPick,
+}: {
+  name: string;
+  detail: BaseRef | null;
+  selected: boolean;
+  isDefault?: boolean;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      className="kd-baserow"
+      data-selected={selected || undefined}
+      onClick={onPick}
+      title={name}
+    >
+      <span className="kd-baserow__title">
+        <span className="kd-baserow__name">{name}</span>
+        {isDefault ? <span className="kd-baserow__tag">分岐元</span> : null}
+        {detail && !detail.remote ? (
+          <span className="kd-baserow__local">手元</span>
+        ) : null}
+      </span>
+      {detail?.subject ? (
+        <span className="kd-baserow__subject">{detail.subject}</span>
+      ) : null}
+      <span className="kd-baserow__meta">
+        <span className="kd-baserow__time">{detail?.relative ?? ""}</span>
+      </span>
+    </button>
   );
 }
 

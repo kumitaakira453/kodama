@@ -219,7 +219,7 @@ impl Git {
                 &[
                     "for-each-ref",
                     "--sort=-committerdate",
-                    "--format=%(refname)\t%(refname:short)\t%(committerdate:relative)",
+                    "--format=%(refname)\t%(refname:short)\t%(committerdate:relative)\t%(contents:subject)",
                     "refs/heads/",
                     "refs/remotes/",
                 ],
@@ -235,6 +235,8 @@ impl Git {
                 let full = cols.next()?.trim();
                 let short = cols.next()?.trim();
                 let relative = cols.next()?.trim();
+                // 件名は無いことがある。空でも行は落とさない。
+                let subject = cols.next().unwrap_or("").trim();
                 // `refs/remotes/origin/HEAD` は既定ブランチへの別名。短縮すると
                 // `origin` になるので、短縮名では弾けない。
                 if short.is_empty() || full.ends_with("/HEAD") {
@@ -252,6 +254,7 @@ impl Git {
                         name: short.to_string(),
                         remote,
                         relative: relative.to_string(),
+                        subject: subject.to_string(),
                     },
                 ))
             })

@@ -74,6 +74,8 @@ pub struct BaseRef {
     pub remote: bool,
     /// 最終コミットの相対表記。どれが生きている枝かの手がかりになる。
     pub relative: String,
+    /// 最終コミットの件名。名前だけでは、どこまで進んだ枝か分からない。
+    pub subject: String,
 }
 
 /// revision セレクタに並べる候補。

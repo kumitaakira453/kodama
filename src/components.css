@@ -3282,3 +3282,78 @@ button.kd-row__expand:hover {
   font-size: 12px;
   outline: none;
 }
+
+/* 起点の一覧。worktree の一覧と同じ並びに揃える。名前だけでは、
+   どこまで進んだ枝なのか分からない。 */
+.kd-baserow {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-baserow:hover {
+  background: var(--kd-hover);
+}
+
+.kd-baserow[data-selected] {
+  background: color-mix(in srgb, var(--kd-accent) 14%, transparent);
+}
+
+.kd-baserow__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.kd-baserow__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--kd-font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.kd-baserow__tag,
+.kd-baserow__local {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+.kd-baserow__tag {
+  background: color-mix(in srgb, var(--kd-accent) 18%, transparent);
+  color: var(--kd-accent);
+}
+
+.kd-baserow__local {
+  background: var(--kd-hover);
+  color: var(--kd-muted);
+}
+
+.kd-baserow__subject {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kd-fg-dim);
+  font-size: 12px;
+}
+
+.kd-baserow__meta {
+  display: flex;
+  justify-content: flex-end;
+  color: var(--kd-muted);
+  font-size: 10.5px;
+}
