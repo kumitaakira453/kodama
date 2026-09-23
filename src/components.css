@@ -3336,7 +3336,11 @@ button.kd-row__expand:hover {
   align-items: center;
   gap: 7px;
   width: 100%;
-  padding: 7px 10px;
+  /* 開くと中身がボタンから入力へ替わる。成り行きに任せると、入れ替わりの
+     たびに数 px 背が変わって下が動く。枠の高さはここで決める。 */
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 10px;
   border: 1px solid var(--kd-border-strong);
   border-radius: var(--kd-radius-md);
   background: transparent;
@@ -3359,6 +3363,8 @@ button.kd-row__expand:hover {
 .kd-basepick__input {
   min-width: 0;
   flex: 1 1 auto;
+  height: 100%;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--kd-fg);
@@ -3372,8 +3378,8 @@ button.kd-row__expand:hover {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: 0;
   border-radius: var(--kd-radius-sm);
   background: transparent;
