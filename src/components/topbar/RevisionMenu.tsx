@@ -92,7 +92,6 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>(() => initialTab(selection));
   const [picking, setPicking] = useState(false);
   const marks = useAtomValue(threadMarksAtom);
-  const overrides = useAtomValue(baseOverridesAtom);
 
   const commits = revisions?.commits ?? [];
   const base = revisions?.base ?? null;
@@ -110,17 +109,6 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
 
   const toggleCommit = (sha: string) =>
     setDraft((prev) => stepRange(prev, commits, sha));
-
-  // 起点を選ぶあいだは、同じダイアログの中身を入れ替える。浮かせると
-  // ダイアログの外へはみ出す。
-  if (picking) {
-    return (
-      <BaseScreen
-        onBack={() => setPicking(false)}
-        onClose={onClose}
-      />
-    );
-  }
 
   return (
     <Modal
@@ -152,10 +140,10 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
       }
     >
       <div className="kd-revmenu">
-        <BaseSummary
-          base={base}
-          overridden={Boolean(worktree && overrides[worktree])}
-          onOpen={() => setPicking(true)}
+        <BasePicker
+          open={picking}
+          onToggle={() => setPicking((v) => !v)}
+          onDone={() => setPicking(false)}
         />
 
         <PickRow
@@ -250,21 +238,31 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
 }
 
 /**
- * 起点を選ぶ画面。ダイアログの中身ごと差し替える。
+ * 比較の起点。押すとその場で下に開く。
  *
- * 起点を変えると並ぶコミットも変わるので、選んだ時点で読み直しに入る。
- * 選び終えたら比較対象の画面へ戻す。
+ * 浮かせない。ダイアログの中で浮かせると、枝の名前に合わせて広げた分が
+ * そのまま外へはみ出す。
+ *
+ * 画面も移さない。選ぶのは ref 1 つで、移るほどの重さがない。押した結果
+ * ダイアログの中身が丸ごと入れ替わると、何が起きたのか読み取れない。
+ *
+ * 下に開けば、幅はダイアログの幅で決まり、覆うものも移る先も無い。
  */
-function BaseScreen({
-  onBack,
-  onClose,
+function BasePicker({
+  open,
+  onToggle,
+  onDone,
 }: {
-  onBack: () => void;
-  onClose: () => void;
+  open: boolean;
+  onToggle: () => void;
+  onDone: () => void;
 }) {
   const worktree = useAtomValue(selectedWorktreeAtom);
   const revisions = useAtomValue(revisionsAtom);
   const [overrides, setOverrides] = useAtom(baseOverridesAtom);
+
+  const base = revisions?.base ?? null;
+  const overridden = Boolean(worktree && overrides[worktree]);
 
   const pick = (name: string | null) => {
     if (worktree) {
@@ -275,68 +273,42 @@ function BaseScreen({
         return next;
       });
     }
-    onBack();
+    onDone();
   };
 
   return (
-    <Modal
-      title="起点を選ぶ"
-      size="sm"
-      onClose={onClose}
-      footer={
-        <>
-          <p className="kd-modal__note">
-            ここから現在までを比べる。既定は分岐元
-          </p>
-          <span className="kd-modal__actions">
-            <Button onClick={onBack}>戻る</Button>
-          </span>
-        </>
-      }
-    >
-      <div className="kd-basescreen">
-        <BaseList
-          bases={revisions?.bases ?? []}
-          base={revisions?.base ?? null}
-          defaultBase={revisions?.defaultBase ?? null}
-          overridden={Boolean(worktree && overrides[worktree])}
-          onPick={pick}
-        />
-      </div>
-    </Modal>
-  );
-}
-
-/**
- * 比較の起点を出す行。押すと起点を選ぶ画面へ移る。
- *
- * 浮かせるメニューにしない。ダイアログの中で浮かせると、枝の名前に合わせて
- * 広げた分がそのまま外へはみ出す。中で画面を切り替えれば、幅はダイアログの
- * 幅で決まり、はみ出しようがない。
- */
-function BaseSummary({
-  base,
-  overridden,
-  onOpen,
-}: {
-  base: string | null;
-  overridden: boolean;
-  onOpen: () => void;
-}) {
-  return (
     <div className="kd-basepick">
-      <span className="kd-basepick__label">起点</span>
-      <button className="kd-basepick__button" onClick={onOpen}>
-        <Icon name="alt_route" size={15} />
-        <span className="kd-basepick__name">{base ?? "分岐元なし"}</span>
-        {overridden ? (
-          <span className="kd-basepick__note">既定から変更中</span>
-        ) : null}
-        <Icon name="chevron_right" size={16} />
-      </button>
+      <div className="kd-basepick__row">
+        <span className="kd-basepick__label">起点</span>
+        <button
+          className="kd-basepick__button"
+          onClick={onToggle}
+          aria-expanded={open}
+        >
+          <Icon name="alt_route" size={15} />
+          <span className="kd-basepick__name">{base ?? "分岐元なし"}</span>
+          {overridden ? (
+            <span className="kd-basepick__note">既定から変更中</span>
+          ) : null}
+          <Icon name={open ? "expand_less" : "expand_more"} size={16} />
+        </button>
+      </div>
+
+      {open ? (
+        <div className="kd-basepick__list">
+          <BaseList
+            bases={revisions?.bases ?? []}
+            base={base}
+            defaultBase={revisions?.defaultBase ?? null}
+            overridden={overridden}
+            onPick={pick}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
+
 
 /**
  * 起点の候補。数が多いので絞り込みを付ける。

@@ -3294,20 +3294,35 @@ button.kd-row__expand:hover {
   font-size: 10.5px;
 }
 
-/* 起点の行。押すと起点を選ぶ画面へ移る。 */
+/* 起点。押すとその場で下に開く。覆わず、移らない。 */
 .kd-basepick {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   padding-bottom: 10px;
   margin-bottom: 4px;
   border-bottom: 1px solid var(--kd-border);
+}
+
+/* 開いた一覧。高さを区切って中でスクロールさせる。下の選択肢まで押し流すと、
+   何を選んでいる最中なのか分からなくなる。 */
+.kd-basepick__list {
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: 8px;
+  padding: 4px;
+  border: 1px solid var(--kd-border);
+  border-radius: var(--kd-radius-md);
+  background: var(--kd-bg);
 }
 
 .kd-basepick__label {
   flex: 0 0 auto;
   color: var(--kd-muted);
   font-size: 11px;
+}
+
+.kd-basepick__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .kd-basepick__button {
@@ -3351,18 +3366,11 @@ button.kd-row__expand:hover {
   font-size: 10px;
 }
 
-/* 起点を選ぶ画面。幅はダイアログで決まるので、はみ出しようがない。 */
-.kd-basescreen {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
 /* 絞り込みは上端に留める。一覧と一緒に流れると、打ち直すたびに上まで戻す
    ことになる。 */
 .kd-basefilter {
   position: sticky;
-  top: 0;
+  top: -4px;
   z-index: 1;
   display: flex;
   align-items: center;
@@ -3370,7 +3378,7 @@ button.kd-row__expand:hover {
   padding: 8px 10px;
   margin-bottom: 4px;
   border-bottom: 1px solid var(--kd-border);
-  background: var(--kd-panel);
+  background: var(--kd-bg);
   color: var(--kd-muted);
 }
 
@@ -3383,4 +3391,14 @@ button.kd-row__expand:hover {
   font: inherit;
   font-size: 12.5px;
   outline: none;
+}
+
+.kd-basemenu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.kd-baserow__time {
+  font-variant-numeric: tabular-nums;
 }
