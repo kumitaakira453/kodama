@@ -3256,13 +3256,19 @@ button.kd-row__expand:hover {
 }
 
 /* メニューの中の絞り込み。項目が多いときだけ出す。 */
+/* 絞り込みは上端に留める。一覧と一緒に流れると、打ち直すたびに
+   上まで戻すことになる。 */
 .kd-menu__search {
+  position: sticky;
+  top: -5px;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px 6px;
-  margin-bottom: 4px;
+  padding: 6px 8px;
+  margin: -5px -5px 4px;
   border-bottom: 1px solid var(--kd-border);
+  background: var(--kd-elevated);
   color: var(--kd-muted);
 }
 

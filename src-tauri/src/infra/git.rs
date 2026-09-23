@@ -209,45 +209,64 @@ impl Git {
     ///
     /// リモート追跡も含める。分岐元はたいてい `origin/develop` のような
     /// リモートの ref で、手元のブランチだけでは既定の起点すら一覧に出ない。
+    ///
+    /// 同じ名前の手元のブランチは落とす。`develop` と `origin/develop` が
+    /// 並ぶと一覧が倍になり、目で追えなくなる。比べたいのは共有されている側。
     pub fn base_refs(&self, worktree: &str) -> Vec<BaseRef> {
-        self.run(
-            worktree,
-            &[
-                "for-each-ref",
-                "--sort=-committerdate",
-                "--format=%(refname:short)\t%(committerdate:relative)",
-                "refs/heads/",
-                "refs/remotes/",
-            ],
-            false,
-        )
-        .unwrap_or_default()
-        .lines()
-        .filter_map(|line| {
-            let (name, relative) = line.split_once('\t')?;
-            let name = name.trim();
-            // `origin/HEAD` は既定ブランチへの別名で、選ぶ対象ではない。
-            if name.is_empty() || name.ends_with("/HEAD") {
-                return None;
-            }
-            Some(BaseRef {
-                remote: name.contains('/') && !self.is_local_branch(worktree, name),
-                name: name.to_string(),
-                relative: relative.trim().to_string(),
-            })
-        })
-        .collect()
-    }
+        let out = self
+            .run(
+                worktree,
+                &[
+                    "for-each-ref",
+                    "--sort=-committerdate",
+                    "--format=%(refname)\t%(refname:short)\t%(committerdate:relative)",
+                    "refs/heads/",
+                    "refs/remotes/",
+                ],
+                false,
+            )
+            .unwrap_or_default();
 
-    /// 手元のブランチか。`feature/x` のように `/` を含む名前があるので、
-    /// 名前の形だけでリモートと決めつけない。
-    fn is_local_branch(&self, worktree: &str, name: &str) -> bool {
-        self.run(
-            worktree,
-            &["show-ref", "--verify", "--quiet", &format!("refs/heads/{name}")],
-            false,
-        )
-        .is_ok()
+        // 名前（リモート名を外したもの）と、出す候補の組。
+        let rows: Vec<(String, BaseRef)> = out
+            .lines()
+            .filter_map(|line| {
+                let mut cols = line.split('\t');
+                let full = cols.next()?.trim();
+                let short = cols.next()?.trim();
+                let relative = cols.next()?.trim();
+                // `refs/remotes/origin/HEAD` は既定ブランチへの別名。短縮すると
+                // `origin` になるので、短縮名では弾けない。
+                if short.is_empty() || full.ends_with("/HEAD") {
+                    return None;
+                }
+                let remote = full.starts_with("refs/remotes/");
+                let bare = if remote {
+                    short.split_once('/').map_or(short, |(_, rest)| rest)
+                } else {
+                    short
+                };
+                Some((
+                    bare.to_string(),
+                    BaseRef {
+                        name: short.to_string(),
+                        remote,
+                        relative: relative.to_string(),
+                    },
+                ))
+            })
+            .collect();
+
+        let mirrored: std::collections::HashSet<&str> = rows
+            .iter()
+            .filter(|(_, b)| b.remote)
+            .map(|(bare, _)| bare.as_str())
+            .collect();
+
+        rows.iter()
+            .filter(|(bare, b)| b.remote || !mirrored.contains(bare.as_str()))
+            .map(|(_, b)| b.clone())
+            .collect()
     }
 
     pub fn ref_exists(&self, worktree: &str, r#ref: &str) -> bool {

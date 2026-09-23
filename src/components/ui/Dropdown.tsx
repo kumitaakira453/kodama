@@ -43,6 +43,8 @@ interface Placement {
   top?: number;
   bottom?: number;
   maxHeight: number;
+  /** ボタンの幅。これより狭いと、開いた先が本体から浮いて見える。 */
+  anchorWidth: number;
 }
 
 /**
@@ -150,7 +152,8 @@ export function Dropdown({
                 top: place.top,
                 bottom: place.bottom,
                 maxHeight: place.maxHeight,
-                minWidth: width,
+                // ボタンより狭いと、開いた先が本体から切り離されて見える。
+                minWidth: Math.max(width, place.anchorWidth),
                 maxWidth: Math.min(window.innerWidth - EDGE * 2, MAX_WIDTH),
               }}
             >
@@ -169,16 +172,23 @@ function placeMenu(button: HTMLElement | null, width: number): Placement | null 
   const rect = button.getBoundingClientRect();
   const below = window.innerHeight - rect.bottom - EDGE * 2;
   const above = rect.top - EDGE * 2;
+  const anchorWidth = rect.width;
   const left = Math.max(
     EDGE,
-    Math.min(rect.left, window.innerWidth - width - EDGE),
+    Math.min(rect.left, window.innerWidth - Math.max(width, anchorWidth) - EDGE),
   );
   if (below < MIN_BELOW && above > below) {
     return {
       left,
-      bottom: window.innerHeight - rect.top + 6,
+      bottom: window.innerHeight - rect.top + 4,
       maxHeight: Math.min(above, MAX_HEIGHT),
+      anchorWidth,
     };
   }
-  return { left, top: rect.bottom + 6, maxHeight: Math.min(below, MAX_HEIGHT) };
+  return {
+    left,
+    top: rect.bottom + 4,
+    maxHeight: Math.min(below, MAX_HEIGHT),
+    anchorWidth,
+  };
 }
