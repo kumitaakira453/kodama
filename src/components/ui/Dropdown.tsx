@@ -96,7 +96,12 @@ export function Dropdown({
       setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      // 開いているものから 1 つずつ閉じる。止めないと、ダイアログの中で
+      // 開いたときに向こうの Esc も走って全部閉じる。
+      e.stopPropagation();
+      e.preventDefault();
+      setOpen(false);
     };
     // 下地が動くと基準にしたボタンの位置がずれる。追いかけずに閉じる。
     const onScroll = (e: Event) => {
@@ -106,12 +111,12 @@ export function Dropdown({
       setOpen(false);
     };
     window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", close);
     return () => {
       window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", close);
     };

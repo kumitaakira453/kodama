@@ -278,9 +278,16 @@ function BasePicker({
       onDone();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onDone();
+      if (e.key !== "Escape") return;
+      // ここで止めないと、ダイアログの Esc も続けて走って全部閉じる。
+      // 開いているものから 1 つずつ閉じるのが、押した人の期待。
+      e.stopPropagation();
+      e.preventDefault();
+      onDone();
     };
     window.addEventListener("mousedown", onDown);
+    // 捕捉の段で受ける。ダイアログは浮上の段で聞いているので、ここで
+    // 止めれば向こうには届かない。
     window.addEventListener("keydown", onKey, true);
     return () => {
       window.removeEventListener("mousedown", onDown);
@@ -318,9 +325,6 @@ function BasePicker({
               value={query}
               autoFocus
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") onDone();
-              }}
               placeholder={base ?? "分岐元なし"}
               spellCheck={false}
             />
