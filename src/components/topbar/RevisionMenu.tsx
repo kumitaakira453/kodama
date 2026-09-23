@@ -22,7 +22,6 @@ import {
   statusesAtom,
 } from "../../state/atoms";
 import { Button } from "../ui/Button";
-import { Dropdown } from "../ui/Dropdown";
 import { Icon } from "../ui/Icon";
 import { Modal } from "../ui/Modal";
 
@@ -91,7 +90,9 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
   const [selection, setSelection] = useAtom(commitSelectionAtom);
   const [draft, setDraft] = useState<CommitSelection | null>(selection);
   const [tab, setTab] = useState<Tab>(() => initialTab(selection));
+  const [picking, setPicking] = useState(false);
   const marks = useAtomValue(threadMarksAtom);
+  const overrides = useAtomValue(baseOverridesAtom);
 
   const commits = revisions?.commits ?? [];
   const base = revisions?.base ?? null;
@@ -109,6 +110,17 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
 
   const toggleCommit = (sha: string) =>
     setDraft((prev) => stepRange(prev, commits, sha));
+
+  // 起点を選ぶあいだは、同じダイアログの中身を入れ替える。浮かせると
+  // ダイアログの外へはみ出す。
+  if (picking) {
+    return (
+      <BaseScreen
+        onBack={() => setPicking(false)}
+        onClose={onClose}
+      />
+    );
+  }
 
   return (
     <Modal
@@ -140,7 +152,11 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
       }
     >
       <div className="kd-revmenu">
-        <BasePicker />
+        <BaseSummary
+          base={base}
+          overridden={Boolean(worktree && overrides[worktree])}
+          onOpen={() => setPicking(true)}
+        />
 
         <PickRow
           threads={marks.byKey[`everything:${worktree}`] ?? 0}
@@ -234,62 +250,90 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
 }
 
 /**
- * 比較の起点。
+ * 起点を選ぶ画面。ダイアログの中身ごと差し替える。
  *
- * 既定は kodama が解いた分岐元。当たることが多いが、途中で base 側を
- * 取り込んだ枝では分岐点が古いままになり、取り込んだぶんの変更まで差分に
- * 出る。別の枝と比べたいこともある。選び直せるようにする。
- *
- * 起点を変えると並ぶコミットも変わるので、選んだ時点で読み直す。
+ * 起点を変えると並ぶコミットも変わるので、選んだ時点で読み直しに入る。
+ * 選び終えたら比較対象の画面へ戻す。
  */
-function BasePicker() {
+function BaseScreen({
+  onBack,
+  onClose,
+}: {
+  onBack: () => void;
+  onClose: () => void;
+}) {
   const worktree = useAtomValue(selectedWorktreeAtom);
   const revisions = useAtomValue(revisionsAtom);
   const [overrides, setOverrides] = useAtom(baseOverridesAtom);
 
-  const base = revisions?.base ?? null;
-  const defaultBase = revisions?.defaultBase ?? null;
-  const bases = revisions?.bases ?? [];
-  const overridden = Boolean(worktree && overrides[worktree]);
-
   const pick = (name: string | null) => {
-    if (!worktree) return;
-    setOverrides((prev) => {
-      const next = { ...prev };
-      if (name === null) delete next[worktree];
-      else next[worktree] = name;
-      return next;
-    });
+    if (worktree) {
+      setOverrides((prev) => {
+        const next = { ...prev };
+        if (name === null) delete next[worktree];
+        else next[worktree] = name;
+        return next;
+      });
+    }
+    onBack();
   };
 
   return (
+    <Modal
+      title="起点を選ぶ"
+      size="sm"
+      onClose={onClose}
+      footer={
+        <>
+          <p className="kd-modal__note">
+            ここから現在までを比べる。既定は分岐元
+          </p>
+          <span className="kd-modal__actions">
+            <Button onClick={onBack}>戻る</Button>
+          </span>
+        </>
+      }
+    >
+      <div className="kd-basescreen">
+        <BaseList
+          bases={revisions?.bases ?? []}
+          base={revisions?.base ?? null}
+          defaultBase={revisions?.defaultBase ?? null}
+          overridden={Boolean(worktree && overrides[worktree])}
+          onPick={pick}
+        />
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * 比較の起点を出す行。押すと起点を選ぶ画面へ移る。
+ *
+ * 浮かせるメニューにしない。ダイアログの中で浮かせると、枝の名前に合わせて
+ * 広げた分がそのまま外へはみ出す。中で画面を切り替えれば、幅はダイアログの
+ * 幅で決まり、はみ出しようがない。
+ */
+function BaseSummary({
+  base,
+  overridden,
+  onOpen,
+}: {
+  base: string | null;
+  overridden: boolean;
+  onOpen: () => void;
+}) {
+  return (
     <div className="kd-basepick">
       <span className="kd-basepick__label">起点</span>
-      <Dropdown
-        icon="alt_route"
-        label={base ?? "分岐元なし"}
-        title="比較の起点を選ぶ"
-        width={480}
-      >
-        {(close) => (
-          <BaseList
-            bases={bases}
-            base={base}
-            defaultBase={defaultBase}
-            overridden={overridden}
-            onPick={(name) => {
-              pick(name);
-              close();
-            }}
-          />
-        )}
-      </Dropdown>
-
-      {overridden ? (
-        <span className="kd-basepick__note" title="既定の分岐元ではありません">
-          既定から変更中
-        </span>
-      ) : null}
+      <button className="kd-basepick__button" onClick={onOpen}>
+        <Icon name="alt_route" size={15} />
+        <span className="kd-basepick__name">{base ?? "分岐元なし"}</span>
+        {overridden ? (
+          <span className="kd-basepick__note">既定から変更中</span>
+        ) : null}
+        <Icon name="chevron_right" size={16} />
+      </button>
     </div>
   );
 }
@@ -325,10 +369,10 @@ function BaseList({
   return (
     <>
       {bases.length > 6 ? (
-        <div className="kd-menu__search">
+        <div className="kd-basefilter">
           <Icon name="search" size={14} />
           <input
-            className="kd-menu__input"
+            className="kd-basefilter__input"
             value={query}
             autoFocus
             onChange={(e) => setQuery(e.target.value)}
@@ -362,10 +406,10 @@ function BaseList({
       </div>
 
       {bases.length === 0 ? (
-        <p className="kd-menu__note">比べられる枝がありません</p>
+        <p className="kd-revmenu__note">比べられる枝がありません</p>
       ) : null}
       {bases.length > 0 && shown.length === 0 && needle !== "" ? (
-        <p className="kd-menu__note">一致する枝がありません</p>
+        <p className="kd-revmenu__note">一致する枝がありません</p>
       ) : null}
     </>
   );

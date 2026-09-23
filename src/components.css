@@ -3219,70 +3219,6 @@ button.kd-row__expand:hover {
   font-size: 10px;
 }
 
-/* 比較の起点。何と比べているかは、選択肢より先に目に入る位置に置く。 */
-.kd-basepick {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 10px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--kd-border);
-}
-
-.kd-basepick__label {
-  flex: 0 0 auto;
-  color: var(--kd-muted);
-  font-size: 11px;
-}
-
-.kd-basepick .kd-dd {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.kd-basepick .kd-dd__button {
-  width: 100%;
-}
-
-/* 既定から外れていることを言う。差分が思ったものと違うとき、比較が違うのか
-   変更が違うのかを切り分けられる。 */
-.kd-basepick__note {
-  flex: 0 0 auto;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--kd-accent-2) 18%, transparent);
-  color: var(--kd-accent-2);
-  font-size: 10px;
-}
-
-/* メニューの中の絞り込み。項目が多いときだけ出す。 */
-/* 絞り込みは上端に留める。一覧と一緒に流れると、打ち直すたびに
-   上まで戻すことになる。 */
-.kd-menu__search {
-  position: sticky;
-  top: -5px;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  margin: -5px -5px 4px;
-  border-bottom: 1px solid var(--kd-border);
-  background: var(--kd-elevated);
-  color: var(--kd-muted);
-}
-
-.kd-menu__input {
-  min-width: 0;
-  flex: 1 1 auto;
-  border: 0;
-  background: transparent;
-  color: var(--kd-fg);
-  font: inherit;
-  font-size: 12px;
-  outline: none;
-}
-
 /* 起点の一覧。worktree の一覧と同じ並びに揃える。名前だけでは、
    どこまで進んだ枝なのか分からない。 */
 .kd-baserow {
@@ -3356,4 +3292,95 @@ button.kd-row__expand:hover {
   justify-content: flex-end;
   color: var(--kd-muted);
   font-size: 10.5px;
+}
+
+/* 起点の行。押すと起点を選ぶ画面へ移る。 */
+.kd-basepick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--kd-border);
+}
+
+.kd-basepick__label {
+  flex: 0 0 auto;
+  color: var(--kd-muted);
+  font-size: 11px;
+}
+
+.kd-basepick__button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 7px 10px;
+  border: 1px solid var(--kd-border-strong);
+  border-radius: var(--kd-radius-md);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--kd-dur-instant) var(--kd-ease-out);
+}
+
+.kd-basepick__button:hover {
+  background: var(--kd-hover);
+}
+
+.kd-basepick__name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--kd-font-mono);
+  font-size: 12.5px;
+}
+
+/* 既定から外れていることを言う。差分が思ったものと違うとき、比較が違うのか
+   変更が違うのかを切り分けられる。 */
+.kd-basepick__note {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kd-accent-2) 18%, transparent);
+  color: var(--kd-accent-2);
+  font-size: 10px;
+}
+
+/* 起点を選ぶ画面。幅はダイアログで決まるので、はみ出しようがない。 */
+.kd-basescreen {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 絞り込みは上端に留める。一覧と一緒に流れると、打ち直すたびに上まで戻す
+   ことになる。 */
+.kd-basefilter {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--kd-border);
+  background: var(--kd-panel);
+  color: var(--kd-muted);
+}
+
+.kd-basefilter__input {
+  min-width: 0;
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+  color: var(--kd-fg);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
 }
