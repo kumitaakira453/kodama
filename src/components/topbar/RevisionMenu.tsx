@@ -1,5 +1,5 @@
 import { useAtom, useAtomValue } from "jotai";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   PSEUDO_LABELS,
@@ -238,15 +238,14 @@ function RevisionDialog({ onClose }: { onClose: () => void }) {
 }
 
 /**
- * 比較の起点。押すとその場で下に開く。
+ * 比較の起点。ボタンの下に開くプルダウン。
  *
- * 浮かせない。ダイアログの中で浮かせると、枝の名前に合わせて広げた分が
- * そのまま外へはみ出す。
+ * ダイアログの中に置く。body へ出して画面に対して位置を決めると、枝の名前に
+ * 合わせて広げた分がダイアログの外へはみ出す。中に置けば、幅も位置もこの行が
+ * 決める。
  *
- * 画面も移さない。選ぶのは ref 1 つで、移るほどの重さがない。押した結果
- * ダイアログの中身が丸ごと入れ替わると、何が起きたのか読み取れない。
- *
- * 下に開けば、幅はダイアログの幅で決まり、覆うものも移る先も無い。
+ * 下を押し下げず、重ねる。押し下げると、開いた拍子に比較対象の選択肢が
+ * 画面の外へ出ていく。
  */
 function BasePicker({
   open,
@@ -264,6 +263,25 @@ function BasePicker({
   const base = revisions?.base ?? null;
   const overridden = Boolean(worktree && overrides[worktree]);
 
+  // 外を押したら閉じる。プルダウンとして当たり前に振る舞わせる。
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (e.target instanceof Node && rootRef.current?.contains(e.target)) return;
+      onDone();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onDone();
+    };
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey, true);
+    };
+  }, [open, onDone]);
+
   const pick = (name: string | null) => {
     if (worktree) {
       setOverrides((prev) => {
@@ -277,9 +295,12 @@ function BasePicker({
   };
 
   return (
-    <div className="kd-basepick">
-      <div className="kd-basepick__row">
-        <span className="kd-basepick__label">起点</span>
+    <div className="kd-basepick" ref={rootRef}>
+      <span className="kd-basepick__label">起点</span>
+
+      {/* 開いた一覧はボタンを基準に置く。行を基準にすると、見出しの幅を
+          数値で当てることになり、文言を変えるたびにずれる。 */}
+      <div className="kd-basepick__control">
         <button
           className="kd-basepick__button"
           onClick={onToggle}
@@ -292,19 +313,19 @@ function BasePicker({
           ) : null}
           <Icon name={open ? "expand_less" : "expand_more"} size={16} />
         </button>
-      </div>
 
-      {open ? (
-        <div className="kd-basepick__list">
-          <BaseList
-            bases={revisions?.bases ?? []}
-            base={base}
-            defaultBase={revisions?.defaultBase ?? null}
-            overridden={overridden}
-            onPick={pick}
-          />
-        </div>
-      ) : null}
+        {open ? (
+          <div className="kd-basepick__list">
+            <BaseList
+              bases={revisions?.bases ?? []}
+              base={base}
+              defaultBase={revisions?.defaultBase ?? null}
+              overridden={overridden}
+              onPick={pick}
+            />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

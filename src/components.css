@@ -3294,23 +3294,38 @@ button.kd-row__expand:hover {
   font-size: 10.5px;
 }
 
-/* 起点。押すとその場で下に開く。覆わず、移らない。 */
+/* 起点。ボタンの下に開くプルダウン。 */
 .kd-basepick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding-bottom: 10px;
   margin-bottom: 4px;
   border-bottom: 1px solid var(--kd-border);
 }
 
-/* 開いた一覧。高さを区切って中でスクロールさせる。下の選択肢まで押し流すと、
-   何を選んでいる最中なのか分からなくなる。 */
+/* 一覧の位置と幅はボタンが決める。 */
+.kd-basepick__control {
+  position: relative;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* 開いた一覧。ボタンの幅に合わせ、下の選択肢に重ねる。押し下げると、
+   開いた拍子に下の選択肢が画面の外へ出ていく。 */
 .kd-basepick__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 2;
   max-height: 260px;
   overflow-y: auto;
-  margin-top: 8px;
   padding: 4px;
-  border: 1px solid var(--kd-border);
+  border: 1px solid var(--kd-border-strong);
   border-radius: var(--kd-radius-md);
-  background: var(--kd-bg);
+  background: var(--kd-elevated);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
 }
 
 .kd-basepick__label {
@@ -3319,18 +3334,11 @@ button.kd-row__expand:hover {
   font-size: 11px;
 }
 
-.kd-basepick__row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .kd-basepick__button {
   display: flex;
   align-items: center;
   gap: 7px;
-  min-width: 0;
-  flex: 1 1 auto;
+  width: 100%;
   padding: 7px 10px;
   border: 1px solid var(--kd-border-strong);
   border-radius: var(--kd-radius-md);
@@ -3378,7 +3386,7 @@ button.kd-row__expand:hover {
   padding: 8px 10px;
   margin-bottom: 4px;
   border-bottom: 1px solid var(--kd-border);
-  background: var(--kd-bg);
+  background: var(--kd-elevated);
   color: var(--kd-muted);
 }
 
