@@ -429,19 +429,18 @@ function BaseRow({
       onClick={onPick}
       title={name}
     >
+      {/* 時刻は名前と同じ行に置く。1 行ぶん背が低くなり、一度に見える枝が増える。 */}
       <span className="kd-baserow__title">
         <span className="kd-baserow__name">{name}</span>
         {isDefault ? <span className="kd-baserow__tag">分岐元</span> : null}
         {detail && !detail.remote ? (
           <span className="kd-baserow__local">手元</span>
         ) : null}
+        <span className="kd-baserow__time">{detail?.relative ?? ""}</span>
       </span>
       {detail?.subject ? (
         <span className="kd-baserow__subject">{detail.subject}</span>
       ) : null}
-      <span className="kd-baserow__meta">
-        <span className="kd-baserow__time">{detail?.relative ?? ""}</span>
-      </span>
     </button>
   );
 }
