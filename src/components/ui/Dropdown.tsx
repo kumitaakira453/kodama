@@ -29,6 +29,12 @@ interface DropdownProps {
 /** ポップオーバーと画面端の間に残す余白。 */
 const EDGE = 8;
 
+/** 高さの上限。画面いっぱいに伸ばすと、一覧なのか画面なのか分からなくなる。 */
+const MAX_HEIGHT = 340;
+
+/** 幅の上限。長い ref 名に引きずられて全幅まで広がるのを止める。 */
+const MAX_WIDTH = 420;
+
 /** これより下が狭ければ上向きに開く。 */
 const MIN_BELOW = 180;
 
@@ -145,7 +151,7 @@ export function Dropdown({
                 bottom: place.bottom,
                 maxHeight: place.maxHeight,
                 minWidth: width,
-                maxWidth: window.innerWidth - EDGE * 2,
+                maxWidth: Math.min(window.innerWidth - EDGE * 2, MAX_WIDTH),
               }}
             >
               {children(close)}
@@ -171,8 +177,8 @@ function placeMenu(button: HTMLElement | null, width: number): Placement | null 
     return {
       left,
       bottom: window.innerHeight - rect.top + 6,
-      maxHeight: above,
+      maxHeight: Math.min(above, MAX_HEIGHT),
     };
   }
-  return { left, top: rect.bottom + 6, maxHeight: below };
+  return { left, top: rect.bottom + 6, maxHeight: Math.min(below, MAX_HEIGHT) };
 }

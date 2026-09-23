@@ -12,7 +12,7 @@ import {
   type CommitSelection,
   type PseudoId,
 } from "../../lib/revisions";
-import type { CommitInfo, WorktreeStatus } from "../../lib/types";
+import type { BaseRef, CommitInfo, WorktreeStatus } from "../../lib/types";
 import {
   baseOverridesAtom,
   commitSelectionAtom,
@@ -272,58 +272,16 @@ function BasePicker() {
         width={280}
       >
         {(close) => (
-          <>
-            {defaultBase ? (
-              <button
-                className="kd-menuitem"
-                data-selected={!overridden || undefined}
-                onClick={() => {
-                  pick(null);
-                  close();
-                }}
-              >
-                <Icon
-                  name={
-                    overridden ? "radio_button_unchecked" : "radio_button_checked"
-                  }
-                  size={15}
-                />
-                <span className="kd-menuitem__text">{defaultBase}</span>
-                <span className="kd-menuitem__hint">分岐元</span>
-              </button>
-            ) : null}
-
-            {bases.length > 0 ? <div className="kd-menu__sep" /> : null}
-
-            {bases
-              .filter((b) => b.name !== defaultBase)
-              .map((b) => (
-                <button
-                  key={b.name}
-                  className="kd-menuitem"
-                  data-selected={b.name === base || undefined}
-                  onClick={() => {
-                    pick(b.name);
-                    close();
-                  }}
-                >
-                  <Icon
-                    name={
-                      b.name === base
-                        ? "radio_button_checked"
-                        : "radio_button_unchecked"
-                    }
-                    size={15}
-                  />
-                  <span className="kd-menuitem__text">{b.name}</span>
-                  <span className="kd-menuitem__hint">{b.relative}</span>
-                </button>
-              ))}
-
-            {bases.length === 0 ? (
-              <p className="kd-menu__note">比べられる枝がありません</p>
-            ) : null}
-          </>
+          <BaseList
+            bases={bases}
+            base={base}
+            defaultBase={defaultBase}
+            overridden={overridden}
+            onPick={(name) => {
+              pick(name);
+              close();
+            }}
+          />
         )}
       </Dropdown>
 
@@ -333,6 +291,96 @@ function BasePicker() {
         </span>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * 起点の候補。数が多いので絞り込みを付ける。
+ *
+ * 枝は溜まる。一覧を上から目で追わせると、目的の枝に着くまでに何度も
+ * 巻き戻すことになる。
+ */
+function BaseList({
+  bases,
+  base,
+  defaultBase,
+  overridden,
+  onPick,
+}: {
+  bases: BaseRef[];
+  base: string | null;
+  defaultBase: string | null;
+  overridden: boolean;
+  onPick: (name: string | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const shown = bases.filter(
+    (b) =>
+      b.name !== defaultBase &&
+      (needle === "" || b.name.toLowerCase().includes(needle)),
+  );
+
+  return (
+    <>
+      {bases.length > 6 ? (
+        <div className="kd-menu__search">
+          <Icon name="search" size={14} />
+          <input
+            className="kd-menu__input"
+            value={query}
+            autoFocus
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="枝を絞り込む"
+            spellCheck={false}
+          />
+        </div>
+      ) : null}
+
+      {defaultBase && (needle === "" || defaultBase.toLowerCase().includes(needle)) ? (
+        <button
+          className="kd-menuitem"
+          data-selected={!overridden || undefined}
+          onClick={() => onPick(null)}
+          title={defaultBase}
+        >
+          <Icon
+            name={overridden ? "radio_button_unchecked" : "radio_button_checked"}
+            size={15}
+          />
+          <span className="kd-menuitem__text">{defaultBase}</span>
+          <span className="kd-menuitem__hint">分岐元</span>
+        </button>
+      ) : null}
+
+      {shown.length > 0 ? <div className="kd-menu__sep" /> : null}
+
+      {shown.map((b) => (
+        <button
+          key={b.name}
+          className="kd-menuitem"
+          data-selected={b.name === base || undefined}
+          onClick={() => onPick(b.name)}
+          title={b.name}
+        >
+          <Icon
+            name={
+              b.name === base ? "radio_button_checked" : "radio_button_unchecked"
+            }
+            size={15}
+          />
+          <span className="kd-menuitem__text">{b.name}</span>
+          <span className="kd-menuitem__hint">{b.relative}</span>
+        </button>
+      ))}
+
+      {bases.length === 0 ? (
+        <p className="kd-menu__note">比べられる枝がありません</p>
+      ) : null}
+      {bases.length > 0 && shown.length === 0 && needle !== "" ? (
+        <p className="kd-menu__note">一致する枝がありません</p>
+      ) : null}
+    </>
   );
 }
 
