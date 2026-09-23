@@ -3327,7 +3327,9 @@ button.kd-row__expand:hover {
   font-size: 11px;
 }
 
-.kd-basepick__button {
+/* 閉じているときはボタン、開いているときは入力の枠。同じ見た目にして、
+   開いた瞬間に箱が動いたように見せない。 */
+.kd-basepick__box {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -3342,8 +3344,44 @@ button.kd-row__expand:hover {
   transition: background var(--kd-dur-instant) var(--kd-ease-out);
 }
 
-.kd-basepick__button:hover {
+.kd-basepick__box:hover {
   background: var(--kd-hover);
+}
+
+.kd-basepick__box[data-open] {
+  border-color: var(--kd-accent);
+  background: transparent;
+  cursor: text;
+}
+
+.kd-basepick__input {
+  min-width: 0;
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+  color: var(--kd-fg);
+  font: inherit;
+  font-family: var(--kd-font-mono);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.kd-basepick__caret {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--kd-radius-sm);
+  background: transparent;
+  color: var(--kd-muted);
+  cursor: pointer;
+}
+
+.kd-basepick__caret:hover {
+  background: var(--kd-hover);
+  color: var(--kd-fg);
 }
 
 .kd-basepick__name {
@@ -3365,33 +3403,6 @@ button.kd-row__expand:hover {
   background: color-mix(in srgb, var(--kd-accent-2) 18%, transparent);
   color: var(--kd-accent-2);
   font-size: 10px;
-}
-
-/* 絞り込みは上端に留める。一覧と一緒に流れると、打ち直すたびに上まで戻す
-   ことになる。 */
-.kd-basefilter {
-  position: sticky;
-  top: -4px;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 10px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--kd-border);
-  background: var(--kd-elevated);
-  color: var(--kd-muted);
-}
-
-.kd-basefilter__input {
-  min-width: 0;
-  flex: 1 1 auto;
-  border: 0;
-  background: transparent;
-  color: var(--kd-fg);
-  font: inherit;
-  font-size: 12.5px;
-  outline: none;
 }
 
 .kd-basemenu {

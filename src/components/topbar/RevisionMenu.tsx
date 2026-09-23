@@ -262,6 +262,12 @@ function BasePicker({
 
   const base = revisions?.base ?? null;
   const overridden = Boolean(worktree && overrides[worktree]);
+  const [query, setQuery] = useState("");
+
+  // 開け直したときに前の絞り込みが残っていると、候補が無いように見える。
+  useEffect(() => {
+    if (!open) setQuery("");
+  }, [open]);
 
   // 外を押したら閉じる。プルダウンとして当たり前に振る舞わせる。
   const rootRef = useRef<HTMLDivElement>(null);
@@ -298,21 +304,49 @@ function BasePicker({
     <div className="kd-basepick" ref={rootRef}>
       <span className="kd-basepick__label">起点</span>
 
-      {/* 開いた一覧はボタンを基準に置く。行を基準にすると、見出しの幅を
+      {/* 開いた一覧はこの枠を基準に置く。行を基準にすると、見出しの幅を
           数値で当てることになり、文言を変えるたびにずれる。 */}
       <div className="kd-basepick__control">
-        <button
-          className="kd-basepick__button"
-          onClick={onToggle}
-          aria-expanded={open}
-        >
-          <Icon name="alt_route" size={15} />
-          <span className="kd-basepick__name">{base ?? "分岐元なし"}</span>
-          {overridden ? (
-            <span className="kd-basepick__note">既定から変更中</span>
-          ) : null}
-          <Icon name={open ? "expand_less" : "expand_more"} size={16} />
-        </button>
+        {/* 開いたら、この枠がそのまま絞り込みの入力になる。別に入力欄を
+            足すと、同じ幅の箱が縦に 2 つ並んで、どちらを見ればよいのか
+            分からなくなる。 */}
+        {open ? (
+          <div className="kd-basepick__box" data-open>
+            <Icon name="alt_route" size={15} />
+            <input
+              className="kd-basepick__input"
+              value={query}
+              autoFocus
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") onDone();
+              }}
+              placeholder={base ?? "分岐元なし"}
+              spellCheck={false}
+            />
+            <button
+              className="kd-basepick__caret"
+              onClick={onToggle}
+              aria-expanded
+              aria-label="閉じる"
+            >
+              <Icon name="expand_less" size={16} />
+            </button>
+          </div>
+        ) : (
+          <button
+            className="kd-basepick__box"
+            onClick={onToggle}
+            aria-expanded={false}
+          >
+            <Icon name="alt_route" size={15} />
+            <span className="kd-basepick__name">{base ?? "分岐元なし"}</span>
+            {overridden ? (
+              <span className="kd-basepick__note">既定から変更中</span>
+            ) : null}
+            <Icon name="expand_more" size={16} />
+          </button>
+        )}
 
         {open ? (
           <div className="kd-basepick__list">
@@ -321,6 +355,7 @@ function BasePicker({
               base={base}
               defaultBase={revisions?.defaultBase ?? null}
               overridden={overridden}
+              query={query}
               onPick={pick}
             />
           </div>
@@ -342,15 +377,17 @@ function BaseList({
   base,
   defaultBase,
   overridden,
+  query,
   onPick,
 }: {
   bases: BaseRef[];
   base: string | null;
   defaultBase: string | null;
   overridden: boolean;
+  /** 絞り込みの語。入力は起点の枠が持つ。 */
+  query: string;
   onPick: (name: string | null) => void;
 }) {
-  const [query, setQuery] = useState("");
   const needle = query.trim().toLowerCase();
   const defaultRef = bases.find((b) => b.name === defaultBase) ?? null;
   const shown = bases.filter(
@@ -361,20 +398,6 @@ function BaseList({
 
   return (
     <>
-      {bases.length > 6 ? (
-        <div className="kd-basefilter">
-          <Icon name="search" size={14} />
-          <input
-            className="kd-basefilter__input"
-            value={query}
-            autoFocus
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="枝を絞り込む"
-            spellCheck={false}
-          />
-        </div>
-      ) : null}
-
       <div className="kd-basemenu">
         {defaultBase &&
         (needle === "" || defaultBase.toLowerCase().includes(needle)) ? (
